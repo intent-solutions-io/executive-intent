@@ -8,8 +8,8 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { isValidEvidence } from '../../src/lib/evidence/types';
-import type { EvidenceBundle } from '../../src/lib/evidence/types';
+import { isValidEvidence, StageOrder } from '../../src/lib/evidence/types';
+import type { EvidenceBundle, IntegrationStatus } from '../../src/lib/evidence/types';
 
 // Forbidden patterns that should never appear in evidence
 const FORBIDDEN_PATTERNS = [
@@ -43,6 +43,7 @@ const REQUIRED_FIELDS = [
   'integrations.nightfall.status',
   'integrations.google_oauth.status',
   'integrations.embeddings.status',
+  'pipeline_health.status',
 ];
 
 function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
@@ -52,6 +53,13 @@ function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
     }
     return undefined;
   }, obj);
+}
+
+/**
+ * Check if a status is considered "good" (verified or processing)
+ */
+function isGoodStatus(status: IntegrationStatus): boolean {
+  return status === 'verified' || status === 'processing' || status === 'connected';
 }
 
 function verifyEvidence(): boolean {
@@ -120,24 +128,32 @@ function verifyEvidence(): boolean {
     }
   }
 
-  // Check OK statuses have required details
+  // Check verified/connected statuses have required details
   const { integrations } = evidence;
 
-  if (integrations.supabase.status === 'OK') {
+  if (isGoodStatus(integrations.supabase.status)) {
     if (!integrations.supabase.project_ref) {
-      warnings.push('Supabase OK but missing project_ref');
+      warnings.push('Supabase verified but missing project_ref');
     }
   }
 
-  if (integrations.inngest.status === 'OK') {
+  if (isGoodStatus(integrations.inngest.status)) {
     if (!integrations.inngest.env) {
-      warnings.push('Inngest OK but missing env');
+      warnings.push('Inngest verified but missing env');
     }
   }
 
-  if (integrations.nightfall.status === 'OK') {
+  if (isGoodStatus(integrations.nightfall.status)) {
     if (!integrations.nightfall.policy_name) {
-      warnings.push('Nightfall OK but missing policy_name');
+      warnings.push('Nightfall verified but missing policy_name');
+    }
+  }
+
+  // Check pipeline health
+  if (evidence.pipeline_health) {
+    const ph = evidence.pipeline_health;
+    if (ph.documents_total > 0 && ph.fully_processed === 0) {
+      warnings.push(`Pipeline has ${ph.documents_total} docs but none fully processed`);
     }
   }
 
@@ -155,12 +171,17 @@ function verifyEvidence(): boolean {
   console.log(`  Generated: ${evidence.generated_at}`);
   console.log('');
 
+  console.log('Pipeline Health:');
+  console.log(`  Status: ${evidence.pipeline_health.status}`);
+  console.log(`  Processing Rate: ${evidence.pipeline_health.processing_rate}`);
+  console.log('');
+
   console.log('Integration Status:');
-  console.log(`  Supabase:    ${evidence.integrations.supabase.status}`);
-  console.log(`  Inngest:     ${evidence.integrations.inngest.status}`);
-  console.log(`  Nightfall:   ${evidence.integrations.nightfall.status}`);
+  console.log(`  Supabase:     ${evidence.integrations.supabase.status}`);
+  console.log(`  Inngest:      ${evidence.integrations.inngest.status}`);
+  console.log(`  Nightfall:    ${evidence.integrations.nightfall.status}`);
   console.log(`  Google OAuth: ${evidence.integrations.google_oauth.status}`);
-  console.log(`  Embeddings:  ${evidence.integrations.embeddings.status}`);
+  console.log(`  Embeddings:   ${evidence.integrations.embeddings.status}`);
   console.log('');
 
   if (warnings.length > 0) {

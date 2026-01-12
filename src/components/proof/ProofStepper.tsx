@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { EvidenceBundle, IntegrationStatus } from '@/lib/evidence/types';
-import { getStatusColor, getStatusIcon, formatRelativeTime } from '@/lib/evidence/format';
+import { getStatusColor, getStatusIcon, getStatusLabel, formatRelativeTime, formatRationale } from '@/lib/evidence/format';
 import Link from 'next/link';
 
 interface StepProps {
@@ -15,6 +15,68 @@ interface StepProps {
   details: string[];
   screenshotPath?: string;
   isLast?: boolean;
+}
+
+/**
+ * Get step circle style based on status
+ * - verified: Green (proven)
+ * - processing/connected: Blue (in progress)
+ * - configured: Gray (not yet proven)
+ * - degraded: Yellow (warning)
+ * - error: Red (failed)
+ */
+function getStepCircleStyle(status: IntegrationStatus): string {
+  switch (status) {
+    case 'verified':
+      return 'bg-green-100 text-green-700 border-green-300';
+    case 'processing':
+    case 'connected':
+      return 'bg-blue-100 text-blue-700 border-blue-300';
+    case 'configured':
+      return 'bg-gray-100 text-gray-500 border-gray-300';
+    case 'degraded':
+      return 'bg-yellow-100 text-yellow-700 border-yellow-300';
+    case 'error':
+      return 'bg-red-100 text-red-700 border-red-300';
+    default:
+      return 'bg-gray-100 text-gray-500 border-gray-300';
+  }
+}
+
+/**
+ * Get checkmark style for "What this proves" items
+ * Only verified gets a green checkmark; others get a neutral indicator
+ */
+function getCheckmarkStyle(status: IntegrationStatus): string {
+  switch (status) {
+    case 'verified':
+      return 'text-green-500';
+    case 'processing':
+    case 'connected':
+      return 'text-blue-500';
+    case 'degraded':
+      return 'text-yellow-500';
+    case 'error':
+      return 'text-red-500';
+    default:
+      return 'text-gray-400';
+  }
+}
+
+function getCheckmarkIcon(status: IntegrationStatus): string {
+  switch (status) {
+    case 'verified':
+      return '✓';
+    case 'processing':
+    case 'connected':
+      return '◉';
+    case 'degraded':
+      return '⚠';
+    case 'error':
+      return '✗';
+    default:
+      return '○';
+  }
 }
 
 function Step({ number, title, description, status, evidencePointer, details, screenshotPath, isLast }: StepProps) {
@@ -29,11 +91,7 @@ function Step({ number, title, description, status, evidencePointer, details, sc
 
       <div className="flex gap-4">
         {/* Step number */}
-        <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold ${
-          status === 'OK' ? 'bg-green-100 text-green-700' :
-          status === 'DEGRADED' ? 'bg-yellow-100 text-yellow-700' :
-          'bg-gray-100 text-gray-500'
-        }`}>
+        <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold border-2 ${getStepCircleStyle(status)}`}>
           {number}
         </div>
 
@@ -42,7 +100,7 @@ function Step({ number, title, description, status, evidencePointer, details, sc
           <div className="flex items-start justify-between mb-2">
             <h3 className="font-semibold text-gray-900">{title}</h3>
             <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(status)}`}>
-              {getStatusIcon(status)} {status}
+              {getStatusIcon(status)} {getStatusLabel(status)}
             </span>
           </div>
 
@@ -70,7 +128,9 @@ function Step({ number, title, description, status, evidencePointer, details, sc
             <ul className="text-sm text-gray-600 space-y-1">
               {details.map((detail, i) => (
                 <li key={i} className="flex items-start gap-2">
-                  <span className="text-green-500 mt-0.5">✓</span>
+                  <span className={`mt-0.5 ${getCheckmarkStyle(status)}`}>
+                    {getCheckmarkIcon(status)}
+                  </span>
                   {detail}
                 </li>
               ))}
@@ -96,6 +156,12 @@ interface ProofStepperProps {
 export function ProofStepper({ evidence }: ProofStepperProps) {
   const { integrations } = evidence;
 
+  // Get retrieval test info
+  const rt = integrations.embeddings.retrieval_test;
+  const retrievalTestStr = rt.query_count > 0
+    ? `${rt.success_count}/${rt.query_count} ${rt.passed ? 'passed' : 'below threshold'}`
+    : 'Not run yet';
+
   const steps: Omit<StepProps, 'number' | 'isLast'>[] = [
     {
       title: 'Connect Google',
@@ -105,10 +171,11 @@ export function ProofStepper({ evidence }: ProofStepperProps) {
       // No screenshot - OAuth config is internal, proof is in Supabase data
       details: [
         `${integrations.google_oauth.scopes.length} OAuth scopes configured`,
+        `Token: ${integrations.google_oauth.token_valid ? 'Valid' : 'Not yet validated'}`,
         integrations.google_oauth.last_connect_at
           ? `Last successful connect: ${formatRelativeTime(integrations.google_oauth.last_connect_at)}`
-          : 'OAuth credentials verified',
-        'Redirect URI configured for callback handling',
+          : 'Awaiting first user connection',
+        `Status rationale: ${formatRationale(integrations.google_oauth.rationale)}`,
       ],
     },
     {
@@ -120,6 +187,7 @@ export function ProofStepper({ evidence }: ProofStepperProps) {
       details: [
         `${integrations.supabase.document_count} documents synced`,
         `${integrations.supabase.chunk_count} chunks created`,
+        `${integrations.supabase.vector_count} vectors indexed`,
         `Schema version: ${integrations.supabase.schema_version}`,
         `RLS: ${integrations.supabase.rls_verified ? 'Verified' : 'Not Verified'}`,
       ],
@@ -135,8 +203,8 @@ export function ProofStepper({ evidence }: ProofStepperProps) {
         `pgvector: ${integrations.supabase.pgvector ? 'Enabled' : 'Disabled'}`,
         integrations.embeddings.last_index_at
           ? `Last indexed: ${formatRelativeTime(integrations.embeddings.last_index_at)}`
-          : 'pgvector ready for embeddings',
-        `Retrieval test: ${integrations.embeddings.retrieval_test.returned}/${integrations.embeddings.retrieval_test.top_k} returned`,
+          : 'No embeddings indexed yet',
+        `Retrieval test: ${retrievalTestStr} (threshold: ${rt.threshold})`,
       ],
     },
     {
@@ -148,9 +216,10 @@ export function ProofStepper({ evidence }: ProofStepperProps) {
       details: [
         `Environment: ${integrations.inngest.env}`,
         `${integrations.inngest.last_run_ids.length} recent workflow runs`,
+        `${integrations.inngest.recent_failures} recent failures`,
         integrations.inngest.last_success_at
           ? `Last success: ${formatRelativeTime(integrations.inngest.last_success_at)}`
-          : 'Inngest event key verified',
+          : 'No successful runs observed yet',
       ],
     },
     {
@@ -164,6 +233,9 @@ export function ProofStepper({ evidence }: ProofStepperProps) {
         `${integrations.nightfall.last_scan_counts.allowed} documents allowed`,
         `${integrations.nightfall.last_scan_counts.redacted} documents redacted`,
         `${integrations.nightfall.last_scan_counts.quarantined} documents quarantined`,
+        integrations.nightfall.last_scan_at
+          ? `Last scan: ${formatRelativeTime(integrations.nightfall.last_scan_at)}`
+          : 'No scans observed yet',
       ],
     },
   ];
