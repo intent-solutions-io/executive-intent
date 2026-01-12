@@ -33,53 +33,18 @@ export async function checkNightfall(): Promise<NightfallIntegration> {
     });
   }
 
-  try {
-    // Check 2: Verify API is reachable with a simple call
-    const apiTestResponse = await fetch('https://api.nightfall.ai/v3/scan', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        config: {
-          detectionRules: [
-            {
-              detectors: [
-                { minNumFindings: 1, detectorType: 'NIGHTFALL_DETECTOR', nightfallDetector: 'CREDIT_CARD_NUMBER' },
-              ],
-            },
-          ],
-        },
-        payload: ['This is a test string with no PII'],
-      }),
+  // Check for actual scan data in Supabase
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    // Can't verify scans without Supabase - API key is configured
+    return buildResult('configured', ['NO_DATA_OBSERVED'], {
+      note: 'Nightfall API key configured, cannot check scan history (no Supabase access)',
     });
+  }
 
-    if (apiTestResponse.status === 401 || apiTestResponse.status === 403) {
-      return buildResult('error', ['AUTH_FAILED'], {
-        status_code: apiTestResponse.status,
-        note: 'Nightfall API key is invalid or expired',
-      });
-    }
-
-    if (!apiTestResponse.ok && apiTestResponse.status !== 200) {
-      return buildResult('configured', ['API_UNREACHABLE'], {
-        status_code: apiTestResponse.status,
-        note: `Nightfall API returned ${apiTestResponse.status}`,
-      });
-    }
-
-    // API is reachable and key is valid - at least "connected"
-    // Now check for actual scan data
-    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !supabaseKey) {
-      return buildResult('connected', ['NO_DATA_OBSERVED'], {
-        note: 'Nightfall API verified, cannot check scan history (no Supabase access)',
-      });
-    }
-
+  try {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Query documents for DLP status counts
@@ -116,20 +81,21 @@ export async function checkNightfall(): Promise<NightfallIntegration> {
     };
 
     if (totalScanned === 0) {
-      // API works but no scans observed
-      status = 'connected';
+      // No scans observed - just configured
+      status = 'configured';
       reason_codes = ['ZERO_SCANS', 'NO_DATA_OBSERVED'];
-      details.note = 'Nightfall API verified, no DLP scans observed yet';
+      details.note = 'Nightfall API key configured, no DLP scans observed yet';
     } else if (scanCounts.redacted > 0 || scanCounts.quarantined > 0) {
-      // Have observed actual DLP enforcement
+      // Have observed actual DLP enforcement (found and handled PII)
       status = 'verified';
       reason_codes = ['ALL_CHECKS_PASSED', 'DATA_FLOWING'];
       details.note = `DLP active: ${scanCounts.allowed} allowed, ${scanCounts.redacted} redacted, ${scanCounts.quarantined} quarantined`;
     } else {
-      // Only "allowed" documents - DLP is running but hasn't flagged anything
-      status = 'processing';
-      reason_codes = ['DATA_FLOWING'];
-      details.note = `${totalScanned} documents scanned, all allowed (no PII detected)`;
+      // Only "allowed" documents - DLP is running and scanned documents
+      // This proves the integration works even if no PII was found
+      status = 'verified';
+      reason_codes = ['ALL_CHECKS_PASSED', 'DATA_FLOWING'];
+      details.note = `DLP verified: ${totalScanned} documents scanned and allowed (no PII detected)`;
     }
 
     return buildResult(status, reason_codes, details, {

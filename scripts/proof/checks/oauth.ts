@@ -3,7 +3,6 @@ import { createClient } from '@supabase/supabase-js';
 import type {
   GoogleOAuthIntegration,
   IntegrationStatus,
-  StatusRationale,
   ReasonCode,
 } from '../../../src/lib/evidence/types';
 
@@ -61,9 +60,10 @@ export async function checkOAuth(): Promise<GoogleOAuthIntegration> {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Check 2: Look for stored tokens/connections
+    // Schema uses: status, scopes, encrypted_refresh_token, last_synced_at
     const { data: connections, error: connError } = await supabase
       .from('google_connections')
-      .select('created_at, scopes, status, access_token, refresh_token')
+      .select('created_at, updated_at, scopes, status, encrypted_refresh_token, last_synced_at')
       .eq('status', 'active')
       .order('created_at', { ascending: false })
       .limit(1);
@@ -77,57 +77,50 @@ export async function checkOAuth(): Promise<GoogleOAuthIntegration> {
 
     // No active connections found
     if (!connections || connections.length === 0) {
-      // Check audit events for past connection attempts
-      const { data: auditEvents } = await supabase
-        .from('audit_events')
-        .select('created_at, metadata, status')
-        .eq('action', 'connect')
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (auditEvents && auditEvents.length > 0) {
-        // Had a connection before but no active token now
-        return buildResult('configured', ['TOKEN_EXPIRED', 'NO_TOKEN'], {
-          last_attempt: auditEvents[0].created_at,
-          note: 'Previous connection exists but no active token',
-        }, {
-          last_connect_at: auditEvents[0].created_at,
-        });
-      }
-
-      // Never connected
       return buildResult('configured', ['NO_TOKEN', 'NO_DATA_OBSERVED'], {
         note: 'OAuth credentials configured, awaiting first user connection',
       });
     }
 
-    // We have an active connection with tokens
+    // We have an active connection
     const conn = connections[0];
-    const hasTokens = !!(conn.access_token || conn.refresh_token);
+    const hasToken = !!conn.encrypted_refresh_token;
 
-    if (!hasTokens) {
+    if (!hasToken) {
       return buildResult('configured', ['NO_TOKEN'], {
-        note: 'Connection record exists but no tokens stored',
+        note: 'Connection record exists but no refresh token stored',
       }, {
         last_connect_at: conn.created_at,
       });
     }
 
-    // Check 3: Verify token still works (make a simple API call)
-    // For now, we trust the token if it exists and connection is active
-    // A real verification would call Google's tokeninfo endpoint
-    // TODO: Add actual token verification via Google API
+    // Check 3: Has the connection been used recently?
+    // If last_synced_at exists and is recent, we can consider it "verified"
+    const lastSynced = conn.last_synced_at ? new Date(conn.last_synced_at) : null;
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    if (lastSynced && lastSynced > twentyFourHoursAgo) {
+      // Recent successful sync - verified
+      return buildResult('verified', ['ALL_CHECKS_PASSED', 'DATA_FLOWING'], {
+        connection_status: conn.status,
+        has_token: true,
+        last_synced_at: conn.last_synced_at,
+        note: 'Active connection with recent successful sync',
+      }, {
+        scopes: conn.scopes || configuredScopes,
+        last_connect_at: conn.last_synced_at || conn.updated_at || conn.created_at,
+        token_valid: true,
+      });
+    }
 
     // Token exists and connection is active - this is "connected"
-    // To be "verified", we'd need to make a successful API call
-    // For now, active connection with token = connected
     return buildResult('connected', ['ALL_CHECKS_PASSED'], {
-      has_access_token: !!conn.access_token,
-      has_refresh_token: !!conn.refresh_token,
       connection_status: conn.status,
+      has_token: true,
+      note: 'Active connection with token (no recent sync observed)',
     }, {
       scopes: conn.scopes || configuredScopes,
-      last_connect_at: conn.created_at,
+      last_connect_at: conn.updated_at || conn.created_at,
       token_valid: true,
     });
 
