@@ -2,6 +2,7 @@ import Link from "next/link";
 import { loadEvidenceSync, getPlaceholderEvidence } from "@/lib/evidence/loadEvidence";
 import { EvidenceCards } from "@/components/proof/EvidenceCards";
 import { EvidenceJsonViewer } from "@/components/proof/EvidenceJsonViewer";
+import { EvidenceTimeline } from "@/components/proof/EvidenceTimeline";
 import { formatTimestamp, formatCommitHash, generateMarkdownSummary } from "@/lib/evidence/format";
 
 export const metadata = {
@@ -184,8 +185,19 @@ export default function EvidencePage() {
         </div>
       </section>
 
+      {/* Evidence Timeline */}
+      <section className="py-12" id="timeline">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Evidence Timeline</h2>
+          <p className="text-gray-600 mb-8">
+            Chronological record of all integration checks and deployment events.
+          </p>
+          <EvidenceTimeline evidence={evidence} />
+        </div>
+      </section>
+
       {/* Integration Detail Sections */}
-      <section className="py-12" id="supabase">
+      <section className="py-12 bg-white border-t" id="supabase">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Supabase Details</h2>
           <div className="bg-white rounded-lg border p-6">
