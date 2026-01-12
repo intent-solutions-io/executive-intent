@@ -52,22 +52,42 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Fetch secrets from Google Secret Manager
+        id: secrets
+        run: |
+          echo "SUPABASE_URL=$(gcloud secrets versions access latest --secret=SUPABASE_URL --project=${{ env.PROJECT_ID }})" >> $GITHUB_OUTPUT
+          echo "SUPABASE_SERVICE_ROLE_KEY=$(gcloud secrets versions access latest --secret=SUPABASE_SERVICE_ROLE_KEY --project=${{ env.PROJECT_ID }})" >> $GITHUB_OUTPUT
+          echo "INNGEST_EVENT_KEY=$(gcloud secrets versions access latest --secret=INNGEST_EVENT_KEY --project=${{ env.PROJECT_ID }})" >> $GITHUB_OUTPUT
+          echo "INNGEST_SIGNING_KEY=$(gcloud secrets versions access latest --secret=INNGEST_SIGNING_KEY --project=${{ env.PROJECT_ID }})" >> $GITHUB_OUTPUT
+          echo "NIGHTFALL_API_KEY=$(gcloud secrets versions access latest --secret=NIGHTFALL_API_KEY --project=${{ env.PROJECT_ID }})" >> $GITHUB_OUTPUT
+          echo "GOOGLE_CLIENT_ID=$(gcloud secrets versions access latest --secret=GOOGLE_CLIENT_ID --project=${{ env.PROJECT_ID }})" >> $GITHUB_OUTPUT
+          echo "GOOGLE_CLIENT_SECRET=$(gcloud secrets versions access latest --secret=GOOGLE_CLIENT_SECRET --project=${{ env.PROJECT_ID }})" >> $GITHUB_OUTPUT
+
       - name: Build
         run: npm run build
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.SUPABASE_URL || 'https://placeholder.supabase.co' }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ steps.secrets.outputs.SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY || 'placeholder-key' }}
 
       - name: Generate evidence bundle
         run: npm run proof:generate
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          INNGEST_EVENT_KEY: ${{ secrets.INNGEST_EVENT_KEY }}
-          INNGEST_SIGNING_KEY: ${{ secrets.INNGEST_SIGNING_KEY }}
-          NIGHTFALL_API_KEY: ${{ secrets.NIGHTFALL_API_KEY }}
-          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          SUPABASE_URL: ${{ steps.secrets.outputs.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ steps.secrets.outputs.SUPABASE_SERVICE_ROLE_KEY }}
+          INNGEST_EVENT_KEY: ${{ steps.secrets.outputs.INNGEST_EVENT_KEY }}
+          INNGEST_SIGNING_KEY: ${{ steps.secrets.outputs.INNGEST_SIGNING_KEY }}
+          NIGHTFALL_API_KEY: ${{ steps.secrets.outputs.NIGHTFALL_API_KEY }}
+          GOOGLE_CLIENT_ID: ${{ steps.secrets.outputs.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ steps.secrets.outputs.GOOGLE_CLIENT_SECRET }}
           GITHUB_SHA: ${{ github.sha }}
           GITHUB_REF_NAME: ${{ github.ref_name }}
           GITHUB_RUN_ID: ${{ github.run_id }}
@@ -77,15 +97,6 @@ jobs:
 
       - name: Verify evidence bundle
         run: npm run proof:verify
-
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ env.SERVICE_ACCOUNT }}
-
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
 
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
