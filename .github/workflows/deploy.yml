@@ -93,7 +93,7 @@ jobs:
       - name: Deploy to Firebase Hosting
         run: |
           firebase experiments:enable webframeworks
-          firebase deploy --only hosting --project ${{ env.PROJECT_ID }}
+          firebase deploy --only hosting --project ${{ env.PROJECT_ID }} --force
 
       - name: Post-deploy health check
         if: github.event.inputs.environment == 'production' || github.ref == 'refs/heads/main'
