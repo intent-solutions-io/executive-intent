@@ -175,11 +175,11 @@ export async function GET(request: Request) {
         const documentId = (docData as { id: string })?.id;
 
         // Step 4: Generate embeddings (only if allowed or redacted)
-        if (dlpDecision.action !== "quarantine" && documentId) {
+        if (dlpDecision.action !== "quarantined" && documentId) {
           console.log(`[test-sync] Generating embedding...`);
 
           // Use sanitized text if redacted
-          const textToEmbed = dlpDecision.action === "redact"
+          const textToEmbed = dlpDecision.action === "redacted"
             ? dlpDecision.sanitizedText?.body || message.snippet
             : `${message.subject}\n\n${message.snippet}`;
 
