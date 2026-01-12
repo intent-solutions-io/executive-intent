@@ -47,7 +47,6 @@ coverage/
 .firebase/
 firebase-debug.log
 firebase-debug.*.log
-.firebaserc
 
 # OpenTofu / Terraform
 infra/tofu/.terraform/

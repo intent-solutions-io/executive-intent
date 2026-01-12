@@ -13,9 +13,8 @@ terraform {
   }
 
   backend "gcs" {
-    # Configured via -backend-config or env vars
-    # bucket = "executive-intent-tfstate"
-    # prefix = "terraform/state"
+    bucket = "executive-intent-tfstate"
+    prefix = "terraform/state"
   }
 }
 
