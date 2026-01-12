@@ -18,6 +18,7 @@ import { checkInngest } from './checks/inngest';
 import { checkNightfall } from './checks/nightfall';
 import { checkOAuth } from './checks/oauth';
 import { checkEmbeddings } from './checks/embeddings';
+import { containsSecrets, redactSecrets } from './redact';
 import type { EvidenceBundle, CommitInfo, CIInfo, DeployInfo } from '../../src/lib/evidence/types';
 import { generateEvidenceMarkdown } from '../../src/lib/evidence/format';
 
@@ -63,37 +64,6 @@ function getDeployInfo(): DeployInfo {
     url: siteUrl,
     completed_at: new Date().toISOString(),
   };
-}
-
-// Secret patterns to detect and block
-const SECRET_PATTERNS = [
-  /eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, // JWT tokens
-  /sk-[A-Za-z0-9]{48}/g, // OpenAI keys
-  /NF-[A-Za-z0-9]{30,}/g, // Nightfall keys
-  /GOCSPX-[A-Za-z0-9_-]+/g, // Google OAuth secrets
-  /ghp_[A-Za-z0-9]{36}/g, // GitHub tokens
-  /gsk_[A-Za-z0-9]{50,}/g, // Groq keys
-  /re_[A-Za-z0-9_]{20,}/g, // Resend keys
-  /signkey-[a-z]+-[a-f0-9]+/g, // Inngest signing keys
-  // Note: Removed overly broad pattern that was catching git hashes
-];
-
-// Check for secrets in output
-function containsSecrets(obj: unknown): boolean {
-  const str = JSON.stringify(obj);
-  return SECRET_PATTERNS.some(pattern => pattern.test(str));
-}
-
-// Redact any secrets from the object
-function redactSecrets(obj: unknown): unknown {
-  const str = JSON.stringify(obj);
-  let redacted = str;
-
-  SECRET_PATTERNS.forEach(pattern => {
-    redacted = redacted.replace(pattern, '[REDACTED]');
-  });
-
-  return JSON.parse(redacted);
 }
 
 async function generateEvidence(): Promise<void> {

@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+import Image from 'next/image';
 import { EvidenceBundle, IntegrationStatus } from '@/lib/evidence/types';
 import { getStatusColor, getStatusIcon, formatRelativeTime } from '@/lib/evidence/format';
 import Link from 'next/link';
@@ -11,10 +13,13 @@ interface StepProps {
   status: IntegrationStatus;
   evidencePointer: string;
   details: string[];
+  screenshotPath?: string;
   isLast?: boolean;
 }
 
-function Step({ number, title, description, status, evidencePointer, details, isLast }: StepProps) {
+function Step({ number, title, description, status, evidencePointer, details, screenshotPath, isLast }: StepProps) {
+  const [imageError, setImageError] = useState(false);
+
   return (
     <div className="relative">
       {/* Connector line */}
@@ -42,6 +47,23 @@ function Step({ number, title, description, status, evidencePointer, details, is
           </div>
 
           <p className="text-gray-600 mb-4">{description}</p>
+
+          {/* Screenshot evidence */}
+          {screenshotPath && !imageError && (
+            <div className="mb-4 rounded-lg border overflow-hidden shadow-sm">
+              <Image
+                src={screenshotPath}
+                alt={`${title} - vendor dashboard screenshot`}
+                width={800}
+                height={450}
+                className="w-full h-auto"
+                onError={() => setImageError(true)}
+              />
+              <div className="bg-gray-50 px-3 py-2 text-xs text-gray-500 border-t">
+                Vendor dashboard screenshot
+              </div>
+            </div>
+          )}
 
           <div className="bg-gray-50 rounded-lg p-4 mb-3">
             <h4 className="text-sm font-medium text-gray-700 mb-2">What this proves:</h4>
@@ -80,6 +102,7 @@ export function ProofStepper({ evidence }: ProofStepperProps) {
       description: 'OAuth configured and ready for Gmail + Calendar access.',
       status: integrations.google_oauth.status,
       evidencePointer: 'google_oauth',
+      // No screenshot - OAuth config is internal, proof is in Supabase data
       details: [
         `${integrations.google_oauth.scopes.length} OAuth scopes configured`,
         integrations.google_oauth.last_connect_at
@@ -89,10 +112,39 @@ export function ProofStepper({ evidence }: ProofStepperProps) {
       ],
     },
     {
+      title: 'Documents Synced (Supabase)',
+      description: 'Gmail and Calendar data synced to Supabase database.',
+      status: integrations.supabase.status,
+      evidencePointer: 'supabase',
+      screenshotPath: '/demo-assets/screens/step-1-supabase-documents.png',
+      details: [
+        `${integrations.supabase.document_count} documents synced`,
+        `${integrations.supabase.chunk_count} chunks created`,
+        `Schema version: ${integrations.supabase.schema_version}`,
+        `RLS: ${integrations.supabase.rls_verified ? 'Verified' : 'Not Verified'}`,
+      ],
+    },
+    {
+      title: 'Embeddings Indexed (Supabase)',
+      description: 'Sanitized content vectorized in Supabase pgvector.',
+      status: integrations.embeddings.status,
+      evidencePointer: 'embeddings',
+      screenshotPath: '/demo-assets/screens/step-2-supabase-embeddings.png',
+      details: [
+        `${integrations.embeddings.vector_count} vectors indexed`,
+        `pgvector: ${integrations.supabase.pgvector ? 'Enabled' : 'Disabled'}`,
+        integrations.embeddings.last_index_at
+          ? `Last indexed: ${formatRelativeTime(integrations.embeddings.last_index_at)}`
+          : 'pgvector ready for embeddings',
+        `Retrieval test: ${integrations.embeddings.retrieval_test.returned}/${integrations.embeddings.retrieval_test.top_k} returned`,
+      ],
+    },
+    {
       title: 'Sync Runs (Inngest)',
       description: 'Orchestration pipeline for incremental Gmail and Calendar sync.',
       status: integrations.inngest.status,
       evidencePointer: 'inngest',
+      screenshotPath: '/demo-assets/screens/step-3-inngest-runs.png',
       details: [
         `Environment: ${integrations.inngest.env}`,
         `${integrations.inngest.last_run_ids.length} recent workflow runs`,
@@ -106,36 +158,12 @@ export function ProofStepper({ evidence }: ProofStepperProps) {
       description: 'Every document scanned before indexing: allow, redact, or quarantine.',
       status: integrations.nightfall.status,
       evidencePointer: 'nightfall',
+      screenshotPath: '/demo-assets/screens/step-4-nightfall-dlp.png',
       details: [
         `Policy: ${integrations.nightfall.policy_name}`,
         `${integrations.nightfall.last_scan_counts.allowed} documents allowed`,
         `${integrations.nightfall.last_scan_counts.redacted} documents redacted`,
         `${integrations.nightfall.last_scan_counts.quarantined} documents quarantined`,
-      ],
-    },
-    {
-      title: 'Embeddings Indexed',
-      description: 'Sanitized content chunked and vectorized in Supabase pgvector.',
-      status: integrations.embeddings.status,
-      evidencePointer: 'embeddings',
-      details: [
-        `${integrations.embeddings.vector_count} vectors indexed`,
-        integrations.embeddings.last_index_at
-          ? `Last indexed: ${formatRelativeTime(integrations.embeddings.last_index_at)}`
-          : 'pgvector ready for embeddings',
-        `Retrieval test: ${integrations.embeddings.retrieval_test.returned}/${integrations.embeddings.retrieval_test.top_k} returned`,
-      ],
-    },
-    {
-      title: 'Retrieval Verified',
-      description: 'Vector search returns relevant, sanitized results with provenance.',
-      status: integrations.supabase.status,
-      evidencePointer: 'supabase',
-      details: [
-        `Schema version: ${integrations.supabase.schema_version}`,
-        `pgvector: ${integrations.supabase.pgvector ? 'Enabled' : 'Disabled'}`,
-        `RLS: ${integrations.supabase.rls_verified ? 'Verified' : 'Not Verified'}`,
-        `${integrations.supabase.document_count} documents, ${integrations.supabase.chunk_count} chunks`,
       ],
     },
   ];

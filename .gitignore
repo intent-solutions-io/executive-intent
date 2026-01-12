@@ -37,6 +37,9 @@ Thumbs.db
 coverage/
 .nyc_output/
 
+# Playwright
+.playwright-user-data/
+
 # TypeScript
 *.tsbuildinfo
 
