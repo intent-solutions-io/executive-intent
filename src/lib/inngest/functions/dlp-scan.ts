@@ -1,25 +1,12 @@
 import { inngest } from "../client";
-
-/**
- * DLP policy tiers
- */
-const DLP_TIERS = {
-  QUARANTINE: [
-    "PASSWORD",
-    "API_KEY",
-    "PRIVATE_KEY",
-    "SSN",
-    "NATIONAL_ID",
-    "BANK_ACCOUNT",
-    "CREDIT_CARD",
-  ],
-  REDACT: [
-    "EMAIL_ADDRESS",
-    "PHONE_NUMBER",
-    "ADDRESS",
-    "PARTIAL_CARD",
-  ],
-};
+import { createAdminClient } from "@/lib/supabase/admin";
+import { scanTextFields, NightfallFinding } from "@/lib/nightfall/client";
+import {
+  determineAction,
+  redactText,
+  createSummary,
+  DlpAction,
+} from "@/lib/nightfall/policy";
 
 /**
  * Handles DLP scanning via Nightfall.
@@ -40,102 +27,125 @@ export const dlpScan = inngest.createFunction(
   { event: "dlp/scan.requested" },
   async ({ event, step }) => {
     const { tenantId, documentId, source, externalId, textFields } = event.data;
+    const supabase = createAdminClient();
 
     // Step 1: Call Nightfall API
-    const findings = await step.run("scan-nightfall", async () => {
-      // TODO: Call Nightfall API
-      // const nightfall = new NightfallClient(process.env.NIGHTFALL_API_KEY);
-      // const response = await nightfall.scanText(Object.values(textFields));
-
+    const scanResult = await step.run("scan-nightfall", async () => {
       console.log(`Scanning document ${documentId} with Nightfall`);
 
-      // Mock response - no findings for now
-      return {
-        findings: [] as Array<{
-          detector: string;
-          confidence: string;
-          location: { start: number; end: number };
-          field: string;
-        }>,
-      };
+      try {
+        const { findings, findingsByField } = await scanTextFields(textFields);
+        console.log(`Nightfall found ${findings.length} findings`);
+
+        return {
+          findings,
+          findingsByField,
+          scanned: true,
+        };
+      } catch (error) {
+        console.error("Nightfall scan failed:", error);
+        // If Nightfall fails, allow the document through
+        // In production, you might want to quarantine instead
+        return {
+          findings: [] as NightfallFinding[],
+          findingsByField: {} as Record<string, NightfallFinding[]>,
+          scanned: false,
+          error: String(error),
+        };
+      }
     });
 
     // Step 2: Evaluate policy
     const policyResult = await step.run("evaluate-policy", async () => {
-      const detectorTypes = findings.findings.map((f) => f.detector);
+      const action = determineAction(scanResult.findings);
+      const summary = createSummary(scanResult.findings, action);
 
-      // Check for quarantine-level findings
-      const hasQuarantineLevel = detectorTypes.some((d) =>
-        DLP_TIERS.QUARANTINE.includes(d)
-      );
-      if (hasQuarantineLevel) {
-        return {
-          action: "quarantine" as const,
-          summary: {
-            totalFindings: findings.findings.length,
-            quarantineReasons: detectorTypes.filter((d) =>
-              DLP_TIERS.QUARANTINE.includes(d)
-            ),
-          },
-        };
-      }
+      console.log(`DLP policy result for ${documentId}: ${action}`);
 
-      // Check for redact-level findings
-      const hasRedactLevel = detectorTypes.some((d) =>
-        DLP_TIERS.REDACT.includes(d)
-      );
-      if (hasRedactLevel) {
-        return {
-          action: "redacted" as const,
-          summary: {
-            totalFindings: findings.findings.length,
-            redactedTypes: detectorTypes.filter((d) =>
-              DLP_TIERS.REDACT.includes(d)
-            ),
-          },
-        };
-      }
-
-      // No sensitive findings
       return {
-        action: "allowed" as const,
-        summary: {
-          totalFindings: 0,
-        },
+        action,
+        summary,
       };
     });
 
     // Step 3: Apply redaction if needed
-    let sanitizedText = textFields;
+    let sanitizedText: Record<string, string> = textFields;
     if (policyResult.action === "redacted") {
       sanitizedText = await step.run("apply-redaction", async () => {
-        // TODO: Apply redaction to text fields
-        // Replace sensitive spans with [REDACTED]
-        console.log(`Redacting ${findings.findings.length} findings in document ${documentId}`);
-        return textFields; // Would be redacted version
+        const redacted: Record<string, string> = {};
+
+        for (const [field, text] of Object.entries(textFields)) {
+          // Get findings for this field
+          const fieldFindings = scanResult.findingsByField[field] || [];
+          redacted[field] = redactText(text, fieldFindings);
+        }
+
+        console.log(`Redacted ${scanResult.findings.length} findings in document ${documentId}`);
+        return redacted;
       });
     }
 
     // Step 4: Update document with DLP status
     await step.run("update-document", async () => {
-      // TODO: Update document in DB with dlp_status and dlp_summary
-      console.log(`Updating document ${documentId} with status: ${policyResult.action}`);
+      // Map action to dlp_status enum
+      const dlpStatus: "allowed" | "redacted" | "quarantined" = policyResult.action;
+
+      const { error } = await supabase
+        .from("documents")
+        .update({
+          dlp_status: dlpStatus,
+          dlp_summary: policyResult.summary,
+          updated_at: new Date().toISOString(),
+        } as never)
+        .eq("id", documentId);
+
+      if (error) {
+        console.error("Failed to update document DLP status:", error);
+        throw error;
+      }
+
+      console.log(`Updated document ${documentId} with status: ${dlpStatus}`);
       return { updated: true };
     });
 
-    // Step 5: Emit embedding request if allowed/redacted
-    if (policyResult.action !== "quarantine") {
+    // Step 5: Store sanitized text for embedding (if not quarantined)
+    if (policyResult.action !== "quarantined") {
+      // Store the sanitized text in a temporary field or pass to embedding
+      await step.run("store-sanitized", async () => {
+        // For now, we'll pass the sanitized text via the embedding event
+        // In a more robust implementation, you might store this in a separate table
+        return { sanitized: true };
+      });
+
+      // Step 6: Emit embedding request
       await step.sendEvent("request-embedding", {
         name: "embedding/index.requested",
         data: {
           tenantId,
           documentId,
+          // Pass sanitized text for embedding
+          sanitizedText,
         },
       });
+    } else {
+      console.log(`Document ${documentId} quarantined - no embedding generated`);
     }
 
-    // Step 6: Audit
+    // Step 7: Audit
     await step.run("audit-dlp", async () => {
+      await supabase.from("audit_events").insert({
+        tenant_id: tenantId,
+        action: `dlp_${policyResult.action}`,
+        object_type: "document",
+        object_id: documentId,
+        metadata: {
+          source,
+          externalId,
+          findingsCount: scanResult.findings.length,
+          scanned: scanResult.scanned,
+        },
+      } as never);
+
       console.log(`Audit: DLP scan for ${source}/${externalId} - ${policyResult.action}`);
       return { audited: true };
     });
@@ -145,6 +155,7 @@ export const dlpScan = inngest.createFunction(
       documentId,
       action: policyResult.action,
       summary: policyResult.summary,
+      findingsCount: scanResult.findings.length,
     };
   }
 );

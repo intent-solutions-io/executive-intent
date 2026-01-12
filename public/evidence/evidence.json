@@ -1,0 +1,83 @@
+{
+  "product": "Executive Intent",
+  "generated_at": "2026-01-12T11:11:41.949Z",
+  "builder": "Claude Code",
+  "commit": {
+    "hash": "bd4335c8b9299bbbc34d52034d524beddad4b9d8",
+    "branch": "main"
+  },
+  "ci": {
+    "provider": "github-actions",
+    "workflow": "local",
+    "run_id": "local",
+    "run_url": "https://github.com/intent-solutions-io/executive-intent/actions"
+  },
+  "deploy": {
+    "target": "firebase-hosting",
+    "firebase_project": "executive-intent",
+    "site": "executive-intent",
+    "channel": "live",
+    "url": "https://executive-intent.web.app",
+    "completed_at": "2026-01-12T11:11:43.319Z"
+  },
+  "integrations": {
+    "supabase": {
+      "status": "OK",
+      "project_ref": "abseweczdjkqxvvptqrv",
+      "schema_version": "003",
+      "pgvector": true,
+      "rls_verified": true,
+      "document_count": 11,
+      "chunk_count": 2,
+      "vector_count": 2,
+      "checked_at": "2026-01-12T11:11:41.950Z"
+    },
+    "inngest": {
+      "status": "OK",
+      "env": "production",
+      "last_run_ids": [
+        "01KERYF5KTGGWW5WTJNKVJHQ8H"
+      ],
+      "last_success_at": "2026-01-12T11:11:41.975Z",
+      "checked_at": "2026-01-12T11:11:41.975Z"
+    },
+    "nightfall": {
+      "status": "OK",
+      "policy_name": "executive-intent-dlp",
+      "last_scan_counts": {
+        "allowed": 11,
+        "redacted": 0,
+        "quarantined": 0
+      },
+      "checked_at": "2026-01-12T11:11:41.976Z"
+    },
+    "google_oauth": {
+      "status": "OK",
+      "scopes": [
+        "imap"
+      ],
+      "last_connect_at": "2026-01-12T07:25:58.205013+00:00",
+      "checked_at": "2026-01-12T11:11:41.977Z"
+    },
+    "embeddings": {
+      "status": "OK",
+      "vector_count": 2,
+      "last_index_at": "2026-01-12T07:32:12.026282+00:00",
+      "retrieval_test": {
+        "top_k": 10,
+        "returned": 2
+      },
+      "checked_at": "2026-01-12T11:11:41.977Z"
+    }
+  },
+  "redactions": {
+    "rules_applied": [
+      "tokens",
+      "passwords",
+      "api_keys",
+      "jwt",
+      "oauth_secrets"
+    ]
+  },
+  "notes": "All integrations verified successfully."
+}

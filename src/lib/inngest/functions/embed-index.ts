@@ -1,13 +1,23 @@
 import { inngest } from "../client";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { chunkEmail, TextChunk } from "@/lib/embeddings/chunker";
+import { generateEmbeddings } from "@/lib/embeddings/provider";
+
+interface DocumentRow {
+  id: string;
+  title: string | null;
+  source: string;
+  dlp_status: string;
+}
 
 /**
  * Handles embedding generation and vector indexing.
  *
  * Steps:
- * 1. Fetch sanitized document content
+ * 1. Get document and sanitized content
  * 2. Chunk text into segments
- * 3. Generate embeddings via Vertex AI
- * 4. Upsert chunks to pgvector
+ * 3. Generate embeddings
+ * 4. Upsert chunks to pgvector in Supabase
  */
 export const embedIndex = inngest.createFunction(
   {
@@ -17,78 +27,156 @@ export const embedIndex = inngest.createFunction(
   },
   { event: "embedding/index.requested" },
   async ({ event, step }) => {
-    const { tenantId, documentId } = event.data;
+    const { tenantId, documentId, sanitizedText } = event.data;
+    const supabase = createAdminClient();
 
-    // Step 1: Fetch document content
+    // Step 1: Fetch document info
     const document = await step.run("fetch-document", async () => {
-      // TODO: Fetch document from DB
-      console.log(`Fetching document ${documentId}`);
+      const { data, error } = await supabase
+        .from("documents")
+        .select("*")
+        .eq("id", documentId)
+        .single();
+
+      if (error || !data) {
+        throw new Error(`Document not found: ${documentId}`);
+      }
+
+      const row = data as unknown as DocumentRow;
+
+      // Skip if quarantined
+      if (row.dlp_status === "quarantined") {
+        return {
+          id: row.id,
+          title: row.title,
+          source: row.source,
+          dlpStatus: row.dlp_status,
+          skip: true,
+          reason: "Document is quarantined",
+        };
+      }
+
       return {
-        id: documentId,
-        sanitizedText: "Sample document content for embedding",
-        dlpStatus: "allowed",
+        id: row.id,
+        title: row.title,
+        source: row.source,
+        dlpStatus: row.dlp_status,
+        skip: false,
       };
     });
 
-    // Skip if quarantined
-    if (document.dlpStatus === "quarantined") {
+    // Skip if document is quarantined
+    if (document.skip) {
       return {
         success: false,
-        reason: "Document is quarantined, no embeddings generated",
+        reason: "reason" in document ? document.reason : "Document skipped",
       };
     }
 
-    // Step 2: Chunk the text
-    const chunks = await step.run("chunk-text", async () => {
-      // TODO: Implement proper chunking with overlap
-      const text = document.sanitizedText;
-      const chunkSize = 512;
-      const overlap = 50;
-      const chunks: Array<{ index: number; text: string; hash: string }> = [];
-
-      for (let i = 0; i < text.length; i += chunkSize - overlap) {
-        const chunkText = text.slice(i, i + chunkSize);
-        chunks.push({
-          index: chunks.length,
-          text: chunkText,
-          hash: Buffer.from(chunkText).toString("base64").slice(0, 32),
-        });
+    // Step 2: Prepare text for embedding
+    const textToEmbed = await step.run("prepare-text", async () => {
+      // Use sanitized text if provided, otherwise fetch from document
+      if (sanitizedText) {
+        const subject = sanitizedText.subject || document.title || "";
+        const body = sanitizedText.body || sanitizedText.snippet || "";
+        return { subject, body };
       }
 
-      console.log(`Created ${chunks.length} chunks for document ${documentId}`);
-      return chunks;
+      // Fallback: just use the title if no sanitized text
+      return {
+        subject: document.title || "",
+        body: "",
+      };
     });
 
-    // Step 3: Generate embeddings
+    // Step 3: Chunk the text
+    const chunks = await step.run("chunk-text", async () => {
+      const emailChunks = chunkEmail(textToEmbed.subject, textToEmbed.body, {
+        maxChunkSize: 800,
+        overlapSize: 100,
+      });
+
+      console.log(`Created ${emailChunks.length} chunks for document ${documentId}`);
+      return emailChunks;
+    });
+
+    // Skip if no chunks
+    if (chunks.length === 0) {
+      return {
+        success: true,
+        documentId,
+        chunksIndexed: 0,
+        reason: "No text to embed",
+      };
+    }
+
+    // Step 4: Generate embeddings
     const embeddings = await step.run("generate-embeddings", async () => {
-      // TODO: Call Vertex AI embeddings API
-      // const vertexai = new VertexAI({ project: process.env.GOOGLE_CLOUD_PROJECT });
-      // const model = vertexai.getGenerativeModel({ model: 'text-embedding-004' });
+      const texts = chunks.map((c: TextChunk) => c.text);
 
-      console.log(`Generating embeddings for ${chunks.length} chunks`);
+      console.log(`Generating embeddings for ${texts.length} chunks`);
 
-      // Mock embeddings (768 dimensions for text-embedding-004)
-      return chunks.map((chunk) => ({
-        ...chunk,
-        embedding: new Array(768).fill(0).map(() => Math.random() - 0.5),
-      }));
+      try {
+        const vectors = await generateEmbeddings(texts);
+        return vectors;
+      } catch (error) {
+        console.error("Embedding generation failed:", error);
+        throw error;
+      }
     });
 
-    // Step 4: Upsert to pgvector
+    // Step 5: Delete existing chunks for this document
+    await step.run("delete-old-chunks", async () => {
+      const { error } = await supabase
+        .from("document_chunks")
+        .delete()
+        .eq("document_id", documentId);
+
+      if (error) {
+        console.error("Failed to delete old chunks:", error);
+      }
+
+      return { deleted: true };
+    });
+
+    // Step 6: Upsert to pgvector
     await step.run("upsert-vectors", async () => {
-      // TODO: Upsert to document_chunks table
       console.log(`Upserting ${embeddings.length} vectors for document ${documentId}`);
 
-      // For each chunk:
-      // INSERT INTO document_chunks (tenant_id, document_id, chunk_index, chunk_text, embedding, chunk_hash)
-      // VALUES ($1, $2, $3, $4, $5, $6)
-      // ON CONFLICT (document_id, chunk_index) DO UPDATE SET ...
+      const chunkRecords = chunks.map((chunk: TextChunk, i: number) => ({
+        tenant_id: tenantId,
+        document_id: documentId,
+        chunk_index: chunk.index,
+        chunk_text: chunk.text,
+        embedding: embeddings[i],
+        chunk_hash: chunk.hash,
+      }));
 
-      return { upserted: embeddings.length };
+      const { error } = await supabase
+        .from("document_chunks")
+        .insert(chunkRecords as never);
+
+      if (error) {
+        console.error("Failed to insert chunks:", error);
+        throw error;
+      }
+
+      return { upserted: chunkRecords.length };
     });
 
-    // Step 5: Audit
+    // Step 7: Audit
     await step.run("audit-embed", async () => {
+      await supabase.from("audit_events").insert({
+        tenant_id: tenantId,
+        action: "embedding_indexed",
+        object_type: "document",
+        object_id: documentId,
+        metadata: {
+          chunksIndexed: embeddings.length,
+          source: document.source,
+        },
+      } as never);
+
       console.log(`Audit: Embedded ${embeddings.length} chunks for document ${documentId}`);
       return { audited: true };
     });

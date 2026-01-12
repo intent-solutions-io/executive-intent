@@ -40,6 +40,7 @@ type Events = {
     data: {
       tenantId: string;
       documentId: string;
+      sanitizedText?: Record<string, string>;
     };
   };
   "retention/enforce.requested": {

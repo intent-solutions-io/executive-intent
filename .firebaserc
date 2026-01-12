@@ -8,7 +8,7 @@
   "targets": {
     "executive-intent": {
       "hosting": {
-        "app": [
+        "default": [
           "executive-intent"
         ]
       }

@@ -246,3 +246,20 @@ export function isQuarantineDetector(detector: string): boolean {
 export function isRedactDetector(detector: string): boolean {
   return REDACT_DETECTORS.has(detector);
 }
+
+/**
+ * Convenience function: Apply DLP policy to findings
+ * Returns action, findings, and sanitized text for multiple fields
+ */
+export function applyDlpPolicy(findings: NightfallFinding[]): {
+  action: DlpAction;
+  findings: NightfallFinding[];
+  sanitizedText?: Record<string, string>;
+} {
+  const action = determineAction(findings);
+  return {
+    action,
+    findings,
+    sanitizedText: undefined, // Caller should use redactText per field if needed
+  };
+}
