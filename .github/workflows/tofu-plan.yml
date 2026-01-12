@@ -1,0 +1,69 @@
+name: OpenTofu Plan
+
+on:
+  pull_request:
+    paths:
+      - 'infra/tofu/**'
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+jobs:
+  plan:
+    name: OpenTofu Plan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Setup OpenTofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: 1.6.0
+
+      - name: OpenTofu Init
+        run: |
+          cd infra/tofu
+          tofu init -backend=false
+
+      - name: OpenTofu Format Check
+        run: |
+          cd infra/tofu
+          tofu fmt -check -recursive
+
+      - name: OpenTofu Validate
+        run: |
+          cd infra/tofu
+          tofu validate
+
+      - name: OpenTofu Plan
+        id: plan
+        run: |
+          cd infra/tofu
+          tofu plan -var-file=envs/prod.tfvars -no-color -out=tfplan 2>&1 | tee plan.txt
+        continue-on-error: true
+
+      - name: Comment PR with Plan
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync('infra/tofu/plan.txt', 'utf8');
+            const truncatedPlan = plan.length > 60000
+              ? plan.substring(0, 60000) + '\n... (truncated)'
+              : plan;
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## OpenTofu Plan\n\n<details>\n<summary>Show Plan</summary>\n\n\`\`\`hcl\n${truncatedPlan}\n\`\`\`\n\n</details>`
+            });
