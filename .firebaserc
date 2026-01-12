@@ -1,0 +1,18 @@
+{
+  "projects": {
+    "default": "executive-intent",
+    "dev": "executive-intent",
+    "staging": "executive-intent",
+    "production": "executive-intent"
+  },
+  "targets": {
+    "executive-intent": {
+      "hosting": {
+        "app": [
+          "executive-intent"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

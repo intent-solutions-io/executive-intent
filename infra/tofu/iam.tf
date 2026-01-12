@@ -70,6 +70,30 @@ resource "google_project_iam_member" "deploy_storage" {
   member  = "serviceAccount:${google_service_account.github_deploy.email}"
 }
 
+resource "google_project_iam_member" "deploy_cloudfunctions" {
+  project = var.project_id
+  role    = "roles/cloudfunctions.admin"
+  member  = "serviceAccount:${google_service_account.github_deploy.email}"
+}
+
+resource "google_project_iam_member" "deploy_artifactregistry" {
+  project = var.project_id
+  role    = "roles/artifactregistry.admin"
+  member  = "serviceAccount:${google_service_account.github_deploy.email}"
+}
+
+resource "google_project_iam_member" "deploy_serviceaccount_user" {
+  project = var.project_id
+  role    = "roles/iam.serviceAccountUser"
+  member  = "serviceAccount:${google_service_account.github_deploy.email}"
+}
+
+resource "google_project_iam_member" "deploy_cloudbuild" {
+  project = var.project_id
+  role    = "roles/cloudbuild.builds.builder"
+  member  = "serviceAccount:${google_service_account.github_deploy.email}"
+}
+
 # Allow GitHub Actions to impersonate the deploy service account
 resource "google_service_account_iam_member" "wif_binding" {
   service_account_id = google_service_account.github_deploy.name
