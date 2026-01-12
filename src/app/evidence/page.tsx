@@ -22,7 +22,7 @@ export default function EvidencePage() {
             <div className="flex items-center gap-3">
               <Link href="/" className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-blue-600 rounded-lg" />
-                <span className="font-bold text-2xl text-gray-900">Executive Intent</span>
+                <span className="font-bold text-2xl text-black">Executive Intent</span>
               </Link>
             </div>
             <div className="flex items-center gap-8">
