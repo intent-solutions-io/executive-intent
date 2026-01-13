@@ -82,7 +82,9 @@ function CriteriaList({ items, verified }: { items: string[]; verified: boolean 
     <ul className="mt-3 space-y-2">
       {items.map((item) => (
         <li key={item} className="flex gap-2 text-body-sm text-neutral-700">
-          <span className="mt-0.5 text-neutral-400">{verified ? '✓' : '•'}</span>
+          <span className={verified ? 'mt-0.5 text-status-verified-text' : 'mt-0.5 text-neutral-500'}>
+            {verified ? '✓' : '•'}
+          </span>
           <span className="min-w-0">{item}</span>
         </li>
       ))}
@@ -455,7 +457,7 @@ export default function EvidencePage() {
                       <ul className="mt-3 space-y-2 text-body-sm text-neutral-700">
                         {rt.failures.no_results > 0 && (
                           <li className="flex gap-2">
-                            <span className="text-neutral-400">•</span>
+                            <span className="text-neutral-500">•</span>
                             <span>
                               No results ({rt.failures.no_results}). Check{' '}
                               <a href="#integration-embeddings" className="text-primary-700 hover:text-primary-800 font-medium">
@@ -470,7 +472,7 @@ export default function EvidencePage() {
                         )}
                         {rt.failures.errors > 0 && (
                           <li className="flex gap-2">
-                            <span className="text-neutral-400">•</span>
+                            <span className="text-neutral-500">•</span>
                             <span>
                               Errors ({rt.failures.errors}). Check credentials and network access.
                             </span>
@@ -553,7 +555,7 @@ export default function EvidencePage() {
                 <ul className="mt-3 space-y-2 text-body-sm text-neutral-700">
                   {vectorMismatch && (
                     <li className="flex gap-2">
-                      <span className="text-neutral-400">•</span>
+                      <span className="text-neutral-500">•</span>
                       <span>
                         Vector mismatch: Supabase reports {integrations.supabase.vector_count} vectors but Embeddings reports {integrations.embeddings.vector_count}.
                       </span>
@@ -561,7 +563,7 @@ export default function EvidencePage() {
                   )}
                   {chunkVectorMismatch && (
                     <li className="flex gap-2">
-                      <span className="text-neutral-400">•</span>
+                      <span className="text-neutral-500">•</span>
                       <span>
                         Chunk/vector mismatch: chunks={integrations.supabase.chunk_count}, vectors={integrations.supabase.vector_count}. This can indicate partial indexing or a stale embedding job.
                       </span>

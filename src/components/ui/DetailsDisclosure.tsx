@@ -53,7 +53,7 @@ export function DetailsDisclosure({
           )}
         </span>
         <svg
-          className={cn('mt-0.5 w-5 h-5 flex-shrink-0 text-neutral-500 transition-transform', open && 'rotate-180')}
+          className={cn('mt-0.5 w-5 h-5 flex-shrink-0 text-neutral-600 transition-transform', open && 'rotate-180')}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"

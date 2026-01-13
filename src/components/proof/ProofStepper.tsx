@@ -246,7 +246,7 @@ export function ProofStepper({ evidence }: { evidence: EvidenceBundle }) {
                     <ul className="mt-3 space-y-2">
                       {s.do.map((line) => (
                         <li key={line} className="flex gap-2 text-body-sm text-neutral-700">
-                          <span className="mt-0.5 text-neutral-400">•</span>
+                          <span className="mt-0.5 text-neutral-500">•</span>
                           <span className="min-w-0">{line}</span>
                         </li>
                       ))}
@@ -257,7 +257,7 @@ export function ProofStepper({ evidence }: { evidence: EvidenceBundle }) {
                     <ul className="mt-3 space-y-2">
                       {s.see.map((line) => (
                         <li key={line} className="flex gap-2 text-body-sm text-neutral-700">
-                          <span className="mt-0.5 text-neutral-400">•</span>
+                          <span className="mt-0.5 text-neutral-500">•</span>
                           <span className="min-w-0">{line}</span>
                         </li>
                       ))}

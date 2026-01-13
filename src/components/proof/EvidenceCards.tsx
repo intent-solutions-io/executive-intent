@@ -44,7 +44,7 @@ function ProofCard({ title, status, rationale, details, checkedAt }: ProofCardPr
       </dl>
 
       <div className="mt-4 pt-4 border-t border-neutral-100">
-        <p className="text-xs text-neutral-500">
+        <p className="text-xs text-neutral-600">
           Checked {formatRelativeTime(checkedAt)}
         </p>
       </div>
@@ -77,21 +77,21 @@ function PipelineHealthCard({ evidence }: PipelineHealthCardProps) {
       {/* Metrics grid - 1 col on mobile, 3 on desktop */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4">
         <div className="bg-neutral-50 rounded-lg p-3">
-          <dt className="text-xs text-neutral-500 uppercase tracking-wider">Documents</dt>
+          <dt className="text-xs text-neutral-600 uppercase tracking-wider">Documents</dt>
           <dd className="text-xl sm:text-2xl font-bold text-neutral-900">{formatNumber(ph.documents_total)}</dd>
         </div>
         <div className="bg-neutral-50 rounded-lg p-3">
-          <dt className="text-xs text-neutral-500 uppercase tracking-wider">Fully Processed</dt>
+          <dt className="text-xs text-neutral-600 uppercase tracking-wider">Fully Processed</dt>
           <dd className="text-xl sm:text-2xl font-bold text-neutral-900">{formatNumber(ph.fully_processed)}</dd>
         </div>
         <div className="bg-neutral-50 rounded-lg p-3">
-          <dt className="text-xs text-neutral-500 uppercase tracking-wider">Processing Rate</dt>
+          <dt className="text-xs text-neutral-600 uppercase tracking-wider">Processing Rate</dt>
           <dd className="text-xl sm:text-2xl font-bold text-neutral-900">{ph.processing_rate}</dd>
         </div>
       </div>
 
       <div className="border-t border-neutral-100 pt-4">
-        <h4 className="text-xs text-neutral-500 uppercase tracking-wider mb-2">Subsystem Status</h4>
+        <h4 className="text-xs text-neutral-600 uppercase tracking-wider mb-2">Subsystem Status</h4>
         <div className="flex flex-wrap gap-2">
           {Object.entries(ph.subsystem_statuses).map(([name, status]) => (
             <span

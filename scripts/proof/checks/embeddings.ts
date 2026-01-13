@@ -327,7 +327,8 @@ async function runRetrievalTests(params: {
   queryEmbeddings: number[][];
 }): Promise<RetrievalTest> {
   const top_k = 10;
-  const threshold = 8; // Need 8/10 queries to return results
+  // Need 8/10 queries to return results; scale down when the dataset is smaller.
+  const threshold = Math.min(8, params.queries.length);
   const match_threshold = 0.5;
 
   const samples: RetrievalSample[] = [];
