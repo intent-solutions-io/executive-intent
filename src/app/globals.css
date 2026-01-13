@@ -4,15 +4,8 @@
 
 :root {
   /* Light mode defaults (off-white, proof-first) */
-  --background: #f8fafc;
+  --background: #fafafa;
   --foreground: #0b1220;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 @layer base {
