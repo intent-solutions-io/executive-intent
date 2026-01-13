@@ -156,7 +156,7 @@ export function ProofStepper({ evidence }: { evidence: EvidenceBundle }) {
     <div className="grid lg:grid-cols-12 gap-8 items-start">
       {/* Mobile: sections dropdown (non-sticky) */}
       <div className="lg:hidden">
-        <label htmlFor="proof-sections" className="text-label font-semibold text-neutral-600">
+        <label htmlFor="proof-sections" className="text-label font-semibold text-neutral-700">
           Sections
         </label>
         <select
@@ -183,7 +183,7 @@ export function ProofStepper({ evidence }: { evidence: EvidenceBundle }) {
       {/* Desktop: sticky side nav */}
       <aside className="hidden lg:block lg:col-span-4">
         <nav className="sticky top-24 rounded-2xl border border-neutral-200 bg-white shadow-card p-4">
-          <div className="text-label font-semibold text-neutral-600">Sections</div>
+          <div className="text-label font-semibold text-neutral-700">Sections</div>
           <ul className="mt-3 space-y-1">
             {steps.map((s, idx) => {
               const active = activeId === s.id;
@@ -242,7 +242,7 @@ export function ProofStepper({ evidence }: { evidence: EvidenceBundle }) {
               <CardContent>
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
-                    <div className="text-label font-semibold text-neutral-600">What you do</div>
+                    <div className="text-label font-semibold text-neutral-700">What you do</div>
                     <ul className="mt-3 space-y-2">
                       {s.do.map((line) => (
                         <li key={line} className="flex gap-2 text-body-sm text-neutral-700">
@@ -253,7 +253,7 @@ export function ProofStepper({ evidence }: { evidence: EvidenceBundle }) {
                     </ul>
                   </div>
                   <div>
-                    <div className="text-label font-semibold text-neutral-600">What you should see</div>
+                    <div className="text-label font-semibold text-neutral-700">What you should see</div>
                     <ul className="mt-3 space-y-2">
                       {s.see.map((line) => (
                         <li key={line} className="flex gap-2 text-body-sm text-neutral-700">

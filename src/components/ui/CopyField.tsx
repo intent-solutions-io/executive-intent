@@ -33,7 +33,7 @@ export function CopyField({ value, copyValue, displayValue, label, truncate = fa
   return (
     <div className={cn('flex flex-col gap-1', className)}>
       {label && (
-        <span className="text-body-xs text-neutral-600 uppercase tracking-wider font-medium">
+        <span className="text-body-xs text-neutral-700 uppercase tracking-wider font-medium">
           {label}
         </span>
       )}
@@ -49,7 +49,7 @@ export function CopyField({ value, copyValue, displayValue, label, truncate = fa
         </code>
         <button
           onClick={handleCopy}
-          className="flex-shrink-0 p-1.5 rounded-lg hover:bg-neutral-100 transition-colors text-neutral-600 hover:text-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+          className="flex-shrink-0 p-1.5 rounded-lg hover:bg-neutral-100 transition-colors text-neutral-700 hover:text-neutral-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
           aria-label={copied ? `${label ?? 'Value'} copied` : `Copy ${label ?? 'value'}`}
         >
           {copied ? (

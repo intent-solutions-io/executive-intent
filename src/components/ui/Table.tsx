@@ -45,7 +45,7 @@ export function Table<T>({
                 key={col.key}
                 scope="col"
                 className={cn(
-                  'px-3 py-2 text-body-xs font-semibold uppercase tracking-wider text-neutral-600 border-b border-neutral-200',
+                  'px-3 py-2 text-body-xs font-semibold uppercase tracking-wider text-neutral-700 border-b border-neutral-200',
                   alignStyles[col.align ?? 'left'],
                   col.headerClassName
                 )}
@@ -58,7 +58,7 @@ export function Table<T>({
         <tbody className="divide-y divide-neutral-200">
           {data.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="px-3 py-10 text-center text-body-sm text-neutral-600">
+              <td colSpan={columns.length} className="px-3 py-10 text-center text-body-sm text-neutral-700">
                 {emptyState ?? 'No rows.'}
               </td>
             </tr>
@@ -85,4 +85,3 @@ export function Table<T>({
     </div>
   );
 }
-

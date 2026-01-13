@@ -35,7 +35,7 @@ function ProofCard({ title, status, rationale, details, checkedAt }: ProofCardPr
       <dl className="space-y-3">
         {details.map(({ label, value }) => (
           <div key={label} className="flex flex-col sm:flex-row sm:justify-between gap-0.5 sm:gap-4 text-sm">
-            <dt className="text-neutral-600">{label}</dt>
+            <dt className="text-neutral-700">{label}</dt>
             <dd className="text-neutral-900 font-mono break-all sm:text-right">
               {typeof value === 'number' ? formatNumber(value) : value}
             </dd>
@@ -44,7 +44,7 @@ function ProofCard({ title, status, rationale, details, checkedAt }: ProofCardPr
       </dl>
 
       <div className="mt-4 pt-4 border-t border-neutral-100">
-        <p className="text-xs text-neutral-600">
+        <p className="text-xs text-neutral-700">
           Checked {formatRelativeTime(checkedAt)}
         </p>
       </div>
@@ -65,7 +65,7 @@ function PipelineHealthCard({ evidence }: PipelineHealthCardProps) {
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
         <div>
           <h3 className="font-bold text-lg text-neutral-900">Pipeline Health</h3>
-          <p className="text-sm text-neutral-600">End-to-end processing status</p>
+          <p className="text-sm text-neutral-700">End-to-end processing status</p>
         </div>
         <span className={`px-3 py-1.5 rounded text-sm font-bold self-start whitespace-nowrap ${getStatusColor(ph.status)}`}>
           {getStatusIcon(ph.status)} {getStatusLabel(ph.status)}
@@ -77,21 +77,21 @@ function PipelineHealthCard({ evidence }: PipelineHealthCardProps) {
       {/* Metrics grid - 1 col on mobile, 3 on desktop */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4">
         <div className="bg-neutral-50 rounded-lg p-3">
-          <dt className="text-xs text-neutral-600 uppercase tracking-wider">Documents</dt>
+          <dt className="text-xs text-neutral-700 uppercase tracking-wider">Documents</dt>
           <dd className="text-xl sm:text-2xl font-bold text-neutral-900">{formatNumber(ph.documents_total)}</dd>
         </div>
         <div className="bg-neutral-50 rounded-lg p-3">
-          <dt className="text-xs text-neutral-600 uppercase tracking-wider">Fully Processed</dt>
+          <dt className="text-xs text-neutral-700 uppercase tracking-wider">Fully Processed</dt>
           <dd className="text-xl sm:text-2xl font-bold text-neutral-900">{formatNumber(ph.fully_processed)}</dd>
         </div>
         <div className="bg-neutral-50 rounded-lg p-3">
-          <dt className="text-xs text-neutral-600 uppercase tracking-wider">Processing Rate</dt>
+          <dt className="text-xs text-neutral-700 uppercase tracking-wider">Processing Rate</dt>
           <dd className="text-xl sm:text-2xl font-bold text-neutral-900">{ph.processing_rate}</dd>
         </div>
       </div>
 
       <div className="border-t border-neutral-100 pt-4">
-        <h4 className="text-xs text-neutral-600 uppercase tracking-wider mb-2">Subsystem Status</h4>
+        <h4 className="text-xs text-neutral-700 uppercase tracking-wider mb-2">Subsystem Status</h4>
         <div className="flex flex-wrap gap-2">
           {Object.entries(ph.subsystem_statuses).map(([name, status]) => (
             <span

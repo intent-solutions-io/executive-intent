@@ -121,7 +121,7 @@ export default function Home() {
                   <CardTitle as="h2" className="text-display-sm">
                     System Status
                   </CardTitle>
-                  <p className="mt-1 text-body-sm text-neutral-600">
+                  <p className="mt-1 text-body-sm text-neutral-700">
                     Pipeline health and key signals from the evidence bundle.
                   </p>
                 </CardHeader>
@@ -154,7 +154,7 @@ export default function Home() {
                 copyValue={evidence.commit.hash}
                 displayValue={formatCommitHash(evidence.commit.hash)}
               />
-              <div className="mt-2 text-body-xs text-neutral-600">
+              <div className="mt-2 text-body-xs text-neutral-700">
                 Branch: <span className="font-mono text-neutral-900">{evidence.commit.branch}</span>
               </div>
             </Card>
@@ -178,7 +178,7 @@ export default function Home() {
 
             <Card padding="sm">
               <CopyField label="Deploy URL" value={evidence.deploy.url} truncate />
-              <div className="mt-2 text-body-xs text-neutral-600">
+              <div className="mt-2 text-body-xs text-neutral-700">
                 Channel: <span className="font-mono text-neutral-900">{evidence.deploy.channel}</span>
               </div>
             </Card>
@@ -266,7 +266,7 @@ export default function Home() {
               </CardHeader>
               <CardContent className="!mt-0">
                 {verified.length === 0 ? (
-                  <p className="text-body-sm text-neutral-600">
+                  <p className="text-body-sm text-neutral-700">
                     Nothing is verified yet. See the checklist on the evidence page for what’s needed.
                   </p>
                 ) : (
@@ -275,7 +275,7 @@ export default function Home() {
                       <li key={i.key} className="flex items-start justify-between gap-4">
                         <div className="min-w-0">
                           <div className="text-body-md font-medium text-neutral-900">{i.label}</div>
-                          <div className="mt-1 text-body-sm text-neutral-600">{getStatusNote(i.status)}</div>
+                          <div className="mt-1 text-body-sm text-neutral-700">{getStatusNote(i.status)}</div>
                         </div>
                         <StatusPill status={i.status} size="sm" />
                       </li>
@@ -297,8 +297,8 @@ export default function Home() {
                     <li key={i.key} className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
                         <div className="text-body-md font-medium text-neutral-900">{i.label}</div>
-                        <div className="mt-1 text-body-sm text-neutral-600">{getStatusNote(i.status)}</div>
-                        <div className="mt-2 text-body-xs text-neutral-600">
+                        <div className="mt-1 text-body-sm text-neutral-700">{getStatusNote(i.status)}</div>
+                        <div className="mt-2 text-body-xs text-neutral-700">
                           To verify:{' '}
                           <span className="text-neutral-800">
                             {VerificationCriteria[i.key as keyof typeof VerificationCriteria]?.[0] ?? 'See evidence'}

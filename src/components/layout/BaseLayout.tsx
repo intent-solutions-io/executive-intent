@@ -152,7 +152,7 @@ export function Footer({ evidenceGeneratedAt }: FooterProps) {
                 <div className="w-7 h-7 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg ring-1 ring-primary-500/25" />
                 <span className="font-semibold text-neutral-900 tracking-tight">Executive Intent</span>
               </Link>
-              <p className="text-body-sm text-neutral-600 max-w-sm">
+              <p className="text-body-sm text-neutral-700 max-w-sm">
                 Proof-first pipeline from Gmail/Calendar → DLP → Vector store → Retrieval.
               </p>
             </div>

@@ -38,16 +38,16 @@ export function Metric({
 
   return (
     <div className={cn('flex flex-col', className)}>
-      <dt className={cn('text-neutral-600 uppercase tracking-wider font-medium', styles.label)}>
+      <dt className={cn('text-neutral-700 uppercase tracking-wider font-medium', styles.label)}>
         {label}
       </dt>
       <dd className="mt-1 flex items-baseline gap-2">
-        {icon && <span className="flex-shrink-0 text-neutral-600">{icon}</span>}
+        {icon && <span className="flex-shrink-0 text-neutral-700">{icon}</span>}
         <span className={cn('font-bold text-neutral-900', styles.value)}>
           {typeof value === 'number' ? value.toLocaleString() : value}
         </span>
         {sublabel && (
-          <span className="text-body-sm text-neutral-600">{sublabel}</span>
+          <span className="text-body-sm text-neutral-700">{sublabel}</span>
         )}
       </dd>
     </div>

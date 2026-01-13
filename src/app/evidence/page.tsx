@@ -167,7 +167,7 @@ export default function EvidencePage() {
                 displayValue={formatCommitHash(evidence.commit.hash)}
                 copyValue={evidence.commit.hash}
               />
-              <div className="mt-2 text-body-xs text-neutral-600">
+              <div className="mt-2 text-body-xs text-neutral-700">
                 Branch: <span className="font-mono text-neutral-900">{evidence.commit.branch}</span>
               </div>
             </Card>
@@ -186,14 +186,14 @@ export default function EvidencePage() {
 
             <Card padding="sm">
               <CopyField label="Deploy" value={evidence.deploy.url} truncate />
-              <div className="mt-2 text-body-xs text-neutral-600">
+              <div className="mt-2 text-body-xs text-neutral-700">
                 Channel: <span className="font-mono text-neutral-900">{evidence.deploy.channel}</span>
               </div>
             </Card>
 
             <Card padding="sm">
               <CopyField label="Generated At" value={formatTimestamp(evidence.generated_at)} copyValue={evidence.generated_at} />
-              <div className="mt-2 text-body-xs text-neutral-600">
+              <div className="mt-2 text-body-xs text-neutral-700">
                 Builder: <span className="font-mono text-neutral-900">{evidence.builder}</span>
               </div>
             </Card>
@@ -286,7 +286,7 @@ export default function EvidencePage() {
                 </div>
 
                 <div className="mt-6 rounded-xl border border-neutral-200 bg-white p-4">
-                  <div className="text-label font-semibold text-neutral-600">What would make this Verified?</div>
+                  <div className="text-label font-semibold text-neutral-700">What would make this Verified?</div>
                   <CriteriaList
                     items={VerificationCriteria.google_oauth}
                     verified={integrations.google_oauth.status === 'verified'}
@@ -320,7 +320,7 @@ export default function EvidencePage() {
                 </div>
 
                 <div className="mt-6 rounded-xl border border-neutral-200 bg-white p-4">
-                  <div className="text-label font-semibold text-neutral-600">What would make this Verified?</div>
+                  <div className="text-label font-semibold text-neutral-700">What would make this Verified?</div>
                   <CriteriaList
                     items={VerificationCriteria.inngest}
                     verified={integrations.inngest.status === 'verified'}
@@ -354,7 +354,7 @@ export default function EvidencePage() {
                 </div>
 
                 <div className="mt-6 rounded-xl border border-neutral-200 bg-white p-4">
-                  <div className="text-label font-semibold text-neutral-600">What would make this Verified?</div>
+                  <div className="text-label font-semibold text-neutral-700">What would make this Verified?</div>
                   <CriteriaList
                     items={VerificationCriteria.nightfall}
                     verified={integrations.nightfall.status === 'verified'}
@@ -388,7 +388,7 @@ export default function EvidencePage() {
                 </div>
 
                 <div className="mt-6 rounded-xl border border-neutral-200 bg-white p-4">
-                  <div className="text-label font-semibold text-neutral-600">What would make this Verified?</div>
+                  <div className="text-label font-semibold text-neutral-700">What would make this Verified?</div>
                   <CriteriaList
                     items={VerificationCriteria.supabase}
                     verified={integrations.supabase.status === 'verified'}
@@ -422,7 +422,7 @@ export default function EvidencePage() {
                 </div>
 
                 <div className="mt-6 rounded-xl border border-neutral-200 bg-white p-4">
-                  <div className="text-label font-semibold text-neutral-600">What would make this Verified?</div>
+                  <div className="text-label font-semibold text-neutral-700">What would make this Verified?</div>
                   <CriteriaList
                     items={VerificationCriteria.embeddings}
                     verified={integrations.embeddings.status === 'verified'}
@@ -456,7 +456,7 @@ export default function EvidencePage() {
                   </div>
                   {!rt.passed && rt.query_count > 0 && (
                     <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50/60 p-4">
-                      <div className="text-label font-semibold text-neutral-600">Top failure reasons</div>
+                      <div className="text-label font-semibold text-neutral-700">Top failure reasons</div>
                       <ul className="mt-3 space-y-2 text-body-sm text-neutral-700">
                         {rt.failures.no_results > 0 && (
                           <li className="flex gap-2">
@@ -535,8 +535,8 @@ export default function EvidencePage() {
                   cell: (r) => (
                     <span className="font-mono">
                       {r.vectors_embeddings.toLocaleString()}
-                      <span className="text-neutral-600"> (emb)</span> / {r.vectors_supabase.toLocaleString()}
-                      <span className="text-neutral-600"> (db)</span>
+                      <span className="text-neutral-700"> (emb)</span> / {r.vectors_supabase.toLocaleString()}
+                      <span className="text-neutral-700"> (db)</span>
                     </span>
                   ),
                 },
@@ -554,7 +554,7 @@ export default function EvidencePage() {
 
             {(vectorMismatch || chunkVectorMismatch) && (
               <div className="mt-4 rounded-2xl border border-neutral-200 bg-white p-4">
-                <div className="text-label font-semibold text-neutral-600">Notes</div>
+                <div className="text-label font-semibold text-neutral-700">Notes</div>
                 <ul className="mt-3 space-y-2 text-body-sm text-neutral-700">
                   {vectorMismatch && (
                     <li className="flex gap-2">

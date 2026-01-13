@@ -71,7 +71,7 @@ interface CardDescriptionProps {
 
 export function CardDescription({ children, className }: CardDescriptionProps) {
   return (
-    <p className={cn('text-body-sm text-neutral-600 mt-1', className)}>
+    <p className={cn('text-body-sm text-neutral-700 mt-1', className)}>
       {children}
     </p>
   );

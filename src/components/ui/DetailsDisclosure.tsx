@@ -49,11 +49,11 @@ export function DetailsDisclosure({
         <span className="min-w-0">
           <span className="block text-body-sm font-medium text-neutral-900">{title}</span>
           {description && (
-            <span className="mt-1 block text-body-xs text-neutral-600">{description}</span>
+            <span className="mt-1 block text-body-xs text-neutral-700">{description}</span>
           )}
         </span>
         <svg
-          className={cn('mt-0.5 w-5 h-5 flex-shrink-0 text-neutral-600 transition-transform', open && 'rotate-180')}
+          className={cn('mt-0.5 w-5 h-5 flex-shrink-0 text-neutral-700 transition-transform', open && 'rotate-180')}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
