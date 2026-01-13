@@ -44,7 +44,7 @@ function ProofCard({ title, status, rationale, details, checkedAt }: ProofCardPr
       </dl>
 
       <div className="mt-4 pt-4 border-t border-neutral-100">
-        <p className="text-xs text-neutral-400">
+        <p className="text-xs text-neutral-500">
           Checked {formatRelativeTime(checkedAt)}
         </p>
       </div>

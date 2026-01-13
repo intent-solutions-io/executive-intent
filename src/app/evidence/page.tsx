@@ -56,6 +56,31 @@ export default function EvidencePage() {
               Complete, machine-readable proof of Executive Intent integrations.
               Download for independent verification.
             </p>
+
+            {/* What this proves - brief */}
+            <div className="mt-8 bg-neutral-50 rounded-xl p-6 text-left max-w-xl mx-auto">
+              <h2 className="text-body-md font-semibold text-neutral-900 mb-3">
+                What this bundle proves:
+              </h2>
+              <p className="text-body-sm text-neutral-700 mb-4">
+                Each integration is working with real data, not just configured. The evidence
+                includes commit hash, CI run, deploy URL, and live integration checks.
+              </p>
+              <div className="grid grid-cols-2 gap-2 text-body-sm">
+                <div className="flex items-center gap-2 text-neutral-700">
+                  <span className="text-green-600">✓</span> OAuth tokens valid
+                </div>
+                <div className="flex items-center gap-2 text-neutral-700">
+                  <span className="text-green-600">✓</span> Database connected
+                </div>
+                <div className="flex items-center gap-2 text-neutral-700">
+                  <span className="text-green-600">✓</span> DLP scanning active
+                </div>
+                <div className="flex items-center gap-2 text-neutral-700">
+                  <span className="text-green-600">✓</span> Embeddings indexed
+                </div>
+              </div>
+            </div>
           </div>
         </Container>
       </Section>

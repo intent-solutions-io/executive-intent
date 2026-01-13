@@ -1,5 +1,7 @@
+'use client';
+
 import Link from 'next/link';
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { Container } from '@/components/ui';
 import { cn } from '@/lib/utils';
 
@@ -7,12 +9,14 @@ interface NavLinkProps {
   href: string;
   children: ReactNode;
   active?: boolean;
+  onClick?: () => void;
 }
 
-function NavLink({ href, children, active }: NavLinkProps) {
+function NavLink({ href, children, active, onClick }: NavLinkProps) {
   return (
     <Link
       href={href}
+      onClick={onClick}
       className={cn(
         'text-body-sm font-medium transition-colors',
         active
@@ -30,8 +34,16 @@ interface NavProps {
 }
 
 export function Nav({ currentPath = '/' }: NavProps) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const navLinks = [
+    { href: '/', label: 'Home' },
+    { href: '/proof', label: 'Proof' },
+    { href: '/evidence', label: 'Evidence' },
+  ];
+
   return (
-    <nav className="sticky top-0 z-50 border-b border-neutral-200 bg-white/80 backdrop-blur-sm">
+    <nav className="sticky top-0 z-50 border-b border-neutral-200 bg-white/95 backdrop-blur-sm">
       <Container>
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
@@ -44,19 +56,16 @@ export function Nav({ currentPath = '/' }: NavProps) {
 
           {/* Desktop Nav Links */}
           <div className="hidden md:flex items-center gap-8">
-            <NavLink href="/" active={currentPath === '/'}>
-              Home
-            </NavLink>
-            <NavLink href="/proof" active={currentPath === '/proof'}>
-              Proof
-            </NavLink>
-            <NavLink href="/evidence" active={currentPath === '/evidence'}>
-              Evidence
-            </NavLink>
+            {navLinks.map(({ href, label }) => (
+              <NavLink key={href} href={href} active={currentPath === href}>
+                {label}
+              </NavLink>
+            ))}
           </div>
 
-          {/* CTA */}
+          {/* Right side: CTA + Hamburger */}
           <div className="flex items-center gap-4">
+            {/* Desktop CTA */}
             <Link
               href="/proof"
               className="hidden sm:inline-flex items-center gap-2 bg-neutral-900 text-white px-4 py-2 rounded-lg text-body-sm font-medium hover:bg-neutral-800 transition-colors"
@@ -66,9 +75,61 @@ export function Nav({ currentPath = '/' }: NavProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </Link>
+
+            {/* Hamburger Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 rounded-lg hover:bg-neutral-100 transition-colors"
+              aria-label="Toggle menu"
+              aria-expanded={mobileMenuOpen}
+            >
+              {mobileMenuOpen ? (
+                <svg className="w-6 h-6 text-neutral-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg className="w-6 h-6 text-neutral-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              )}
+            </button>
           </div>
         </div>
       </Container>
+
+      {/* Mobile Menu Dropdown */}
+      {mobileMenuOpen && (
+        <div className="md:hidden border-t border-neutral-200 bg-white">
+          <Container>
+            <div className="py-4 space-y-1">
+              {navLinks.map(({ href, label }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    'block px-4 py-3 rounded-lg text-body-md font-medium transition-colors',
+                    currentPath === href
+                      ? 'bg-neutral-100 text-neutral-900'
+                      : 'text-neutral-700 hover:bg-neutral-50'
+                  )}
+                >
+                  {label}
+                </Link>
+              ))}
+              <div className="pt-3 mt-3 border-t border-neutral-200">
+                <Link
+                  href="/proof"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block w-full text-center bg-neutral-900 text-white px-4 py-3 rounded-lg text-body-md font-medium hover:bg-neutral-800 transition-colors"
+                >
+                  View Proof →
+                </Link>
+              </div>
+            </div>
+          </Container>
+        </div>
+      )}
     </nav>
   );
 }
@@ -133,7 +194,7 @@ export function Footer() {
               &copy; {currentYear} Intent Solutions. All rights reserved.
             </p>
             <div className="flex gap-4">
-              <span className="text-body-xs text-neutral-400">
+              <span className="text-body-xs text-neutral-500">
                 Built with Next.js + Supabase + Inngest
               </span>
             </div>

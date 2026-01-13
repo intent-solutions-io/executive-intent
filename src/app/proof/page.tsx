@@ -82,6 +82,74 @@ export default function ProofPage() {
         </Container>
       </Section>
 
+      {/* What is Executive Intent */}
+      <Section background="white" padding="lg" border="bottom">
+        <Container size="md">
+          <div className="max-w-2xl mx-auto">
+            <h2 className="text-display-sm font-bold text-neutral-900 mb-4">
+              What is Executive Intent?
+            </h2>
+            <p className="text-body-lg text-neutral-700 mb-6">
+              A secure pipeline that syncs your Gmail and Calendar, scans content through
+              Nightfall DLP (allow, redact, or quarantine), then indexes sanitized content
+              as vector embeddings for semantic search.
+            </p>
+
+            <div className="bg-neutral-50 rounded-xl p-6 mb-8">
+              <h3 className="text-body-md font-semibold text-neutral-900 mb-3">
+                What this evidence bundle proves:
+              </h3>
+              <ul className="space-y-2 text-body-md text-neutral-700">
+                <li className="flex items-start gap-2">
+                  <span className="text-green-600 mt-0.5">✓</span>
+                  OAuth credentials are valid and tokens work
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-600 mt-0.5">✓</span>
+                  Documents sync to Supabase database
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-600 mt-0.5">✓</span>
+                  DLP scans run and make allow/redact/quarantine decisions
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-600 mt-0.5">✓</span>
+                  Embeddings are indexed and searchable via pgvector
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-600 mt-0.5">✓</span>
+                  Inngest orchestrates the pipeline end-to-end
+                </li>
+              </ul>
+            </div>
+
+            {/* User Journey */}
+            <h3 className="text-display-xs font-semibold text-neutral-900 mb-4">
+              User Journey
+            </h3>
+            <div className="space-y-3">
+              {[
+                { step: 1, action: 'Connect Google account', result: 'OAuth flow validates credentials' },
+                { step: 2, action: 'Pipeline syncs your inbox', result: 'Inngest orchestrates incremental fetch' },
+                { step: 3, action: 'Each email scanned', result: 'Nightfall DLP: allow, redact, or quarantine' },
+                { step: 4, action: 'Clean content indexed', result: 'pgvector embeddings stored in Supabase' },
+                { step: 5, action: 'Search your data', result: 'Semantic retrieval returns relevant results' },
+              ].map(({ step, action, result }) => (
+                <div key={step} className="flex items-start gap-4 p-3 bg-neutral-50 rounded-lg">
+                  <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-bold text-sm flex-shrink-0">
+                    {step}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-neutral-900 text-body-md">{action}</div>
+                    <div className="text-body-sm text-neutral-600">{result}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Container>
+      </Section>
+
       {/* Proof Stepper */}
       <Section background="gray" padding="xl">
         <Container>

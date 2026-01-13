@@ -42,7 +42,7 @@ export function Metric({
         {label}
       </dt>
       <dd className="mt-1 flex items-baseline gap-2">
-        {icon && <span className="flex-shrink-0 text-neutral-400">{icon}</span>}
+        {icon && <span className="flex-shrink-0 text-neutral-500">{icon}</span>}
         <span className={cn('font-bold text-neutral-900', styles.value)}>
           {typeof value === 'number' ? value.toLocaleString() : value}
         </span>
