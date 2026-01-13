@@ -87,8 +87,11 @@ export default function Home() {
             <div className="lg:col-span-7">
               <div className="inline-flex items-center gap-3">
                 <StatusPill status={ph.status} />
-                <span className="text-body-sm text-neutral-600">
-                  Evidence generated {formatTimestamp(evidence.generated_at)}
+                <span className="text-body-sm text-neutral-700">
+                  Evidence generated{' '}
+                  <span className="font-mono text-neutral-900">
+                    {formatTimestamp(evidence.generated_at)}
+                  </span>
                 </span>
               </div>
 

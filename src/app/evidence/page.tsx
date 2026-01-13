@@ -125,8 +125,11 @@ export default function EvidencePage() {
             <div className="max-w-2xl">
               <div className="flex items-center gap-3">
                 <StatusPill status={ph.status} />
-                <span className="text-body-sm text-neutral-600">
-                  Generated {formatTimestamp(evidence.generated_at)}
+                <span className="text-body-sm text-neutral-700">
+                  Generated{' '}
+                  <span className="font-mono text-neutral-900">
+                    {formatTimestamp(evidence.generated_at)}
+                  </span>
                 </span>
               </div>
               <h1 className="mt-5 text-display-lg md:text-display-xl font-semibold text-neutral-900 tracking-tight">

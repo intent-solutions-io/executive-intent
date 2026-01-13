@@ -173,20 +173,23 @@ export function Footer({ evidenceGeneratedAt }: FooterProps) {
                 Repository
               </a>
               {evidenceGeneratedAt ? (
-                <span className="text-neutral-600">
-                  Evidence: {formatTimestamp(evidenceGeneratedAt)}
+                <span className="text-neutral-700">
+                  Evidence:{' '}
+                  <span className="font-mono text-neutral-900">
+                    {formatTimestamp(evidenceGeneratedAt)}
+                  </span>
                 </span>
               ) : (
-                <span className="text-neutral-600">Evidence: —</span>
+                <span className="text-neutral-700">Evidence: —</span>
               )}
             </div>
           </div>
 
           <div className="mt-10 pt-6 border-t border-neutral-200 flex flex-col sm:flex-row justify-between items-center gap-4">
-            <p className="text-body-xs text-neutral-600">
+            <p className="text-body-xs text-neutral-700">
               &copy; {currentYear} Intent Solutions. All rights reserved.
             </p>
-            <span className="text-body-xs text-neutral-600">
+            <span className="text-body-xs text-neutral-700">
               Next.js • Supabase • Inngest
             </span>
           </div>
