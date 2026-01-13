@@ -57,23 +57,13 @@ export async function checkEmbeddings(): Promise<EmbeddingsIntegration> {
     ...overrides,
   });
 
-  // Check 1: Embedding provider configured?
-  if (!openaiKey) {
-    return buildResult('error', ['MISSING_CREDENTIALS'], {
-      missing: [
-        'OPENAI_API_KEY',
-      ].filter(Boolean),
-    });
-  }
-
-  // Check 2: Vector store credentials present?
+  // Check 1: Vector store credentials present?
   if (!supabaseUrl || !supabaseKey) {
     return buildResult('error', ['MISSING_CREDENTIALS'], {
       missing: [
         !supabaseUrl && 'SUPABASE_URL',
         !supabaseKey && 'SUPABASE_SERVICE_ROLE_KEY',
       ].filter(Boolean),
-      note: 'Embedding provider configured but cannot verify vector store (missing Supabase service credentials)',
     });
   }
 
@@ -118,15 +108,29 @@ export async function checkEmbeddings(): Promise<EmbeddingsIntegration> {
 
     const lastIndexAt = latestChunk?.[0]?.created_at || null;
 
+    const provider_configured = Boolean(openaiKey);
+
     // No vectors yet (provider may be reachable, but no indexed data observed)
     if (!vectorCount || vectorCount === 0) {
+      if (!provider_configured) {
+        return buildResult('error', ['MISSING_CREDENTIALS'], {
+          missing: ['OPENAI_API_KEY'],
+          note: 'No embeddings indexed and embedding provider is not configured',
+          provider_configured,
+        }, {
+          vector_count: 0,
+          last_index_at: lastIndexAt,
+        });
+      }
+
       // Prove the embedding provider is reachable (no-op probe embedding)
-      const probe = await fetchOpenAIEmbeddings(openaiKey, ['Executive Intent embedding probe']);
+      const probe = await fetchOpenAIEmbeddings(openaiKey!, ['Executive Intent embedding probe']);
       if (!probe.ok) {
         return buildResult('error', [probe.reason], {
           note: 'Embedding provider probe failed',
           api_status: probe.status,
           error: probe.error,
+          provider_configured,
         }, {
           vector_count: 0,
           last_index_at: lastIndexAt,
@@ -135,6 +139,7 @@ export async function checkEmbeddings(): Promise<EmbeddingsIntegration> {
 
       return buildResult('connected', ['NO_DATA_OBSERVED_YET'], {
         note: 'Embedding provider reachable; no vectors indexed yet',
+        provider_configured,
       }, {
         vector_count: 0,
         last_index_at: lastIndexAt,
@@ -169,37 +174,81 @@ export async function checkEmbeddings(): Promise<EmbeddingsIntegration> {
       });
     }
 
-    const queries = [...TEST_QUERIES];
-    const queryEmbeddings = await fetchOpenAIEmbeddings(openaiKey, queries);
-    if (!queryEmbeddings.ok) {
-      const retrieval_test: RetrievalTest = {
-        query_count: queries.length,
+    let queries: string[] = [];
+    let queryEmbeddings: number[][] = [];
+
+    if (provider_configured) {
+      queries = [...TEST_QUERIES];
+      const embedded = await fetchOpenAIEmbeddings(openaiKey!, queries);
+      if (!embedded.ok) {
+        const retrieval_test: RetrievalTest = {
+          query_count: queries.length,
+          success_count: 0,
+          top_k: 10,
+          threshold: 8,
+          passed: false,
+          failures: { no_results: 0, errors: queries.length },
+          samples: queries.slice(0, 3).map((query) => ({ query, results: [] })),
+        };
+
+        return buildResult('degraded', ['API_UNREACHABLE'], {
+          note: 'Embedding provider could not embed retrieval probes',
+          api_status: embedded.status,
+          error: embedded.error,
+          provider_configured,
+        }, {
+          vector_count: vectorCount || 0,
+          last_index_at: lastIndexAt,
+          retrieval_test,
+        });
+      }
+
+      queryEmbeddings = embedded.embeddings;
+    } else {
+      const { data: chunks, error: chunksError } = await supabase
+        .from('document_chunks')
+        .select('id, document_id, embedding')
+        .eq('tenant_id', tenantId)
+        .not('embedding', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (chunksError) {
+        return buildResult('degraded', ['API_UNREACHABLE'], {
+          note: 'Could not load sample embeddings for retrieval probe',
+          error: chunksError.message,
+          provider_configured,
+        }, {
+          vector_count: vectorCount || 0,
+          last_index_at: lastIndexAt,
+        });
+      }
+
+      for (const row of (chunks || []) as Array<{ id?: string; embedding?: unknown }>) {
+        if (!row.id) continue;
+        const parsed = parseEmbedding(row.embedding);
+        if (!parsed) continue;
+        queries.push(`probe:chunk:${row.id.substring(0, 8)}`);
+        queryEmbeddings.push(parsed);
+      }
+    }
+
+    const retrievalTest = queries.length > 0
+      ? await runRetrievalTests({
+        supabase,
+        tenantId,
+        queries,
+        queryEmbeddings,
+      })
+      : {
+        query_count: 0,
         success_count: 0,
         top_k: 10,
         threshold: 8,
         passed: false,
-        failures: { no_results: 0, errors: queries.length },
-        samples: queries.slice(0, 3).map((query) => ({ query, results: [] })),
+        failures: { no_results: 0, errors: 0 },
+        samples: [],
       };
-
-      return buildResult('error', [queryEmbeddings.reason], {
-        note: 'Embedding provider could not embed retrieval probes',
-        api_status: queryEmbeddings.status,
-        error: queryEmbeddings.error,
-      }, {
-        vector_count: vectorCount || 0,
-        last_index_at: lastIndexAt,
-        retrieval_test,
-      });
-    }
-
-    // We have vectors - run retrieval tests using semantic query embeddings
-    const retrievalTest = await runRetrievalTests({
-      supabase,
-      tenantId,
-      queries,
-      queryEmbeddings: queryEmbeddings.embeddings,
-    });
 
     // Determine status based on vector presence and retrieval test
     // Verified only if retrieval meets threshold (no greenwashing).
@@ -209,9 +258,20 @@ export async function checkEmbeddings(): Promise<EmbeddingsIntegration> {
       vector_count: vectorCount,
       last_index_at: lastIndexAt,
       retrieval_success_rate: `${retrievalTest.success_count}/${retrievalTest.query_count}`,
+      provider_configured,
     };
 
-    if (retrievalTest.query_count > 0 && retrievalTest.failures.errors === retrievalTest.query_count) {
+    if (!provider_configured) {
+      status = 'degraded';
+      reason_codes = retrievalTest.passed
+        ? ['MISSING_CREDENTIALS', 'THRESHOLD_MET']
+        : retrievalTest.query_count > 0
+          ? ['MISSING_CREDENTIALS', 'RETRIEVAL_BELOW_THRESHOLD']
+          : ['MISSING_CREDENTIALS', 'NO_DATA_OBSERVED_YET'];
+      details.note = retrievalTest.passed
+        ? 'Retrieval works with existing vectors, but OPENAI_API_KEY is missing so new embeddings cannot be generated'
+        : 'OPENAI_API_KEY is missing (embedding generation disabled)';
+    } else if (retrievalTest.query_count > 0 && retrievalTest.failures.errors === retrievalTest.query_count) {
       status = 'error';
       reason_codes = ['API_UNREACHABLE'];
       details.note = `Retrieval probe failed for all queries (${retrievalTest.query_count})`;
@@ -240,6 +300,19 @@ export async function checkEmbeddings(): Promise<EmbeddingsIntegration> {
       error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
+}
+
+function parseEmbedding(value: unknown): number[] | null {
+  if (Array.isArray(value) && value.every((v) => typeof v === 'number')) return value as number[];
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      if (Array.isArray(parsed) && parsed.every((v) => typeof v === 'number')) return parsed as number[];
+    } catch {
+      return null;
+    }
+  }
+  return null;
 }
 
 /**

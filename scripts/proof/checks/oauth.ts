@@ -142,6 +142,15 @@ export async function checkOAuth(): Promise<GoogleOAuthIntegration> {
   try {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    function looksLikeOAuthConnection(scopes: unknown, refreshToken: unknown): boolean {
+      const s = Array.isArray(scopes) ? scopes.filter((v): v is string => typeof v === 'string') : [];
+      if (s.length === 0) return false;
+      // Ignore IMAP test connections (used by /api/test-sync).
+      if (s.includes('imap')) return false;
+      if (typeof refreshToken === 'string' && refreshToken.startsWith('imap-')) return false;
+      return s.some((scope) => scope.includes('googleapis.com/auth/'));
+    }
+
     // Check 2: Look for stored tokens/connections
     // Schema uses: status, scopes, encrypted_refresh_token, last_synced_at
     const { data: connections, error: connError } = await supabase
@@ -149,7 +158,7 @@ export async function checkOAuth(): Promise<GoogleOAuthIntegration> {
       .select('created_at, updated_at, scopes, status, encrypted_refresh_token, encrypted_dek, last_synced_at')
       .eq('status', 'active')
       .order('created_at', { ascending: false })
-      .limit(1);
+      .limit(10);
 
     if (connError) {
       return buildResult('configured', ['API_UNREACHABLE'], {
@@ -165,8 +174,16 @@ export async function checkOAuth(): Promise<GoogleOAuthIntegration> {
       });
     }
 
-    // We have an active connection
-    const conn = connections[0];
+    const oauthConn = connections.find((c) => looksLikeOAuthConnection(c.scopes, c.encrypted_refresh_token));
+    if (!oauthConn) {
+      return buildResult('configured', ['NO_TOKEN', 'NO_DATA_OBSERVED_YET'], {
+        note: 'No OAuth-scoped active connection found (ignoring IMAP test connections)',
+        active_connections_found: connections.length,
+      });
+    }
+
+    // We have an active OAuth connection
+    const conn = oauthConn;
     const refreshToken = typeof conn.encrypted_refresh_token === 'string' ? conn.encrypted_refresh_token : '';
     const storedAccessToken = typeof conn.encrypted_dek === 'string' ? conn.encrypted_dek : '';
     const hasRefreshToken = refreshToken.length > 0;
