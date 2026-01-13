@@ -1,199 +1,246 @@
-import Link from "next/link";
-import { loadEvidenceSync, getPlaceholderEvidence } from "@/lib/evidence/loadEvidence";
-import { EvidenceCards } from "@/components/proof/EvidenceCards";
-import { formatTimestamp, formatCommitHash } from "@/lib/evidence/format";
+import Link from 'next/link';
+import { loadEvidenceSync, getPlaceholderEvidence } from '@/lib/evidence/loadEvidence';
+import { EvidenceCards } from '@/components/proof/EvidenceCards';
+import { formatTimestamp, formatCommitHash } from '@/lib/evidence/format';
+import { BaseLayout } from '@/components/layout';
+import { Section, Container, SectionHeader, Button, StatusPill, Card, CardContent } from '@/components/ui';
 
-export default function Home() {
-  // Load evidence at build time
-  const evidence = loadEvidenceSync() || getPlaceholderEvidence();
+// Feature list for "What's Built" section
+const FEATURES = [
+  { text: 'Google OAuth connection (Gmail + Calendar)', done: true },
+  { text: 'Incremental ingestion orchestration (Inngest)', done: true },
+  { text: 'Nightfall DLP enforcement (allow/redact/quarantine)', done: true },
+  { text: 'Embeddings in Supabase pgvector', done: true },
+  { text: 'Retrieval verification (vector query)', done: true },
+  { text: 'Audit trail + retention hooks', done: true },
+];
+
+// Trust strip items
+function TrustStrip({ evidence }: { evidence: ReturnType<typeof getPlaceholderEvidence> }) {
+  const items = [
+    { label: 'Commit', value: formatCommitHash(evidence.commit.hash), mono: true },
+    { label: 'CI Run', value: evidence.ci.run_id, link: evidence.ci.run_url, mono: true },
+    { label: 'Deploy', value: evidence.deploy.site, link: evidence.deploy.url, mono: true },
+    { label: 'Generated', value: formatTimestamp(evidence.generated_at), mono: false },
+  ];
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      {/* Navigation */}
-      <nav className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-600 rounded-lg" />
-              <span className="font-bold text-2xl text-black">Executive Intent</span>
+    <Section background="gray" padding="sm" border="both">
+      <Container>
+        <div className="flex flex-wrap justify-center gap-6 md:gap-12">
+          {items.map(({ label, value, link, mono }) => (
+            <div key={label} className="text-center">
+              <div className="text-label text-neutral-500 mb-1">{label}</div>
+              {link ? (
+                <a
+                  href={link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`text-primary-600 hover:text-primary-700 hover:underline ${mono ? 'font-mono' : ''} text-body-sm font-medium`}
+                >
+                  {value}
+                </a>
+              ) : (
+                <div className={`text-neutral-900 ${mono ? 'font-mono' : ''} text-body-sm font-medium`}>
+                  {value}
+                </div>
+              )}
             </div>
-            <div className="hidden md:flex items-center gap-8">
-              <Link href="/demo" className="text-gray-600 hover:text-gray-900">
-                Proof
-              </Link>
-              <Link href="/evidence" className="text-gray-600 hover:text-gray-900">
-                Evidence
-              </Link>
+          ))}
+        </div>
+      </Container>
+    </Section>
+  );
+}
+
+export default function Home() {
+  const evidence = loadEvidenceSync() || getPlaceholderEvidence();
+  const pipelineStatus = evidence.pipeline_health.status;
+
+  return (
+    <BaseLayout currentPath="/">
+      {/* Hero Section */}
+      <Section background="white" padding="xl">
+        <Container>
+          <div className="text-center max-w-4xl mx-auto">
+            {/* Status badge */}
+            <div className="flex justify-center mb-6">
+              <StatusPill status={pipelineStatus} size="lg" />
             </div>
-            <div className="flex items-center gap-4">
-              <Link
-                href="/demo"
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition"
-              >
+
+            {/* Headline */}
+            <h1 className="text-display-xl md:text-display-2xl font-bold text-neutral-900 text-balance">
+              Executive Intent
+            </h1>
+
+            {/* Subheadline */}
+            <p className="mt-6 text-body-xl text-neutral-600 max-w-2xl mx-auto text-balance">
+              Your inbox + calendar, organized for decisions. Gmail + Calendar &rarr; Nightfall DLP &rarr; pgvector search, orchestrated by Inngest.
+            </p>
+
+            {/* CTAs */}
+            <div className="mt-10 flex flex-col sm:flex-row justify-center gap-4">
+              <Button href="/proof" variant="primary" size="lg">
                 View Proof
-              </Link>
+              </Button>
+              <Button href="/evidence" variant="outline" size="lg">
+                Evidence Bundle
+              </Button>
             </div>
           </div>
-        </div>
-      </nav>
+        </Container>
+      </Section>
 
-      {/* Hero */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
-        <div className="text-center">
-          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 tracking-tight">
-            Executive Intent
-          </h1>
-          <p className="mt-6 text-xl text-gray-600 max-w-3xl mx-auto">
-            Gmail + Calendar → Nightfall DLP → pgvector search (Supabase) orchestrated by Inngest.
-          </p>
-          <div className="mt-10 flex justify-center gap-4">
-            <Link
-              href="/demo"
-              className="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition text-lg"
-            >
-              View Proof
-            </Link>
+      {/* Trust Strip - Receipt chain */}
+      <TrustStrip evidence={evidence} />
+
+      {/* What's Built Section */}
+      <Section background="dark" padding="lg">
+        <Container size="md">
+          <SectionHeader
+            title="What's Built"
+            description="End-to-end data pipeline with enterprise-grade security"
+            centered
+          />
+          <div className="mt-10 grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {FEATURES.map(({ text, done }) => (
+              <div key={text} className="flex items-start gap-3 text-neutral-300">
+                <span className={`mt-0.5 ${done ? 'text-green-400' : 'text-neutral-500'}`}>
+                  {done ? '✓' : '○'}
+                </span>
+                <span className="text-body-md">{text}</span>
+              </div>
+            ))}
+          </div>
+        </Container>
+      </Section>
+
+      {/* Pipeline Status Section */}
+      <Section background="white" padding="lg">
+        <Container>
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-8">
+            <SectionHeader
+              title="Integration Status"
+              description="Real-time verification of all system integrations"
+            />
             <Link
               href="/evidence"
-              className="border border-gray-300 text-gray-700 px-8 py-3 rounded-lg font-semibold hover:bg-gray-50 transition text-lg"
+              className="text-primary-600 hover:text-primary-700 text-body-sm font-medium inline-flex items-center gap-1 group"
             >
-              Evidence Bundle
+              View full evidence bundle
+              <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
             </Link>
           </div>
-        </div>
-      </section>
-
-      {/* What's Built */}
-      <section className="py-16 bg-gray-900 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-bold text-center mb-8">What&apos;s Built</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
-            <div className="flex items-start gap-3">
-              <span className="text-green-400 mt-1">✓</span>
-              <span>Google OAuth connection (Gmail + Calendar)</span>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="text-green-400 mt-1">✓</span>
-              <span>Incremental ingestion orchestration (Inngest)</span>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="text-green-400 mt-1">✓</span>
-              <span>Nightfall DLP enforcement (allow/redact/quarantine)</span>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="text-green-400 mt-1">✓</span>
-              <span>Embeddings in Supabase pgvector</span>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="text-green-400 mt-1">✓</span>
-              <span>Retrieval verification (vector query)</span>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="text-green-400 mt-1">✓</span>
-              <span>Audit trail + retention hooks</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Receipts Strip */}
-      <section className="py-8 bg-gray-100 border-y">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-wrap justify-center gap-8 text-sm">
-            <div className="text-center">
-              <div className="text-gray-500 mb-1">Commit</div>
-              <div className="font-mono font-medium">{formatCommitHash(evidence.commit.hash)}</div>
-            </div>
-            <div className="text-center">
-              <div className="text-gray-500 mb-1">CI Run</div>
-              <a
-                href={evidence.ci.run_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-mono font-medium text-blue-600 hover:underline"
-              >
-                {evidence.ci.run_id}
-              </a>
-            </div>
-            <div className="text-center">
-              <div className="text-gray-500 mb-1">Deploy URL</div>
-              <a
-                href={evidence.deploy.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-mono font-medium text-blue-600 hover:underline"
-              >
-                {evidence.deploy.site}
-              </a>
-            </div>
-            <div className="text-center">
-              <div className="text-gray-500 mb-1">Deployed</div>
-              <div className="font-mono font-medium">{formatTimestamp(evidence.deploy.completed_at)}</div>
-            </div>
-            <div className="text-center">
-              <div className="text-gray-500 mb-1">Firebase</div>
-              <div className="font-mono font-medium">{evidence.deploy.firebase_project}</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Proof Cards */}
-      <section className="py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-bold text-center mb-8">Integration Status</h2>
           <EvidenceCards evidence={evidence} />
-          <div className="text-center mt-8">
-            <Link
-              href="/evidence"
-              className="text-blue-600 hover:text-blue-700 font-medium"
-            >
-              View full evidence bundle →
-            </Link>
-          </div>
-        </div>
-      </section>
+        </Container>
+      </Section>
 
-      {/* Build Info */}
-      <section className="py-8 bg-gray-50 border-t">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-sm text-gray-500">
-            Generated {formatTimestamp(evidence.generated_at)}
-            {" • "}
-            <a
-              href={`https://github.com/intent-solutions-io/executive-intent/commit/${evidence.commit.hash}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:underline font-mono"
-            >
-              {formatCommitHash(evidence.commit.hash)}
-            </a>
-          </p>
-        </div>
-      </section>
+      {/* How It Works - Simple timeline */}
+      <Section background="gray" padding="lg" border="top">
+        <Container size="md">
+          <SectionHeader
+            title="How It Works"
+            description="From inbox to insight in four verified steps"
+            centered
+          />
+          <div className="mt-12 relative">
+            {/* Timeline line */}
+            <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-px bg-neutral-300 -translate-x-1/2" />
 
-      {/* Footer */}
-      <footer className="border-t py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="flex items-center gap-2 mb-4 md:mb-0">
-              <div className="w-6 h-6 bg-blue-600 rounded" />
-              <span className="font-semibold">Executive Intent</span>
-            </div>
-            <div className="flex gap-8 text-sm text-gray-600">
-              <Link href="/demo" className="hover:text-gray-900">
-                Proof
-              </Link>
-              <Link href="/evidence" className="hover:text-gray-900">
-                Evidence
-              </Link>
+            {/* Steps */}
+            <div className="space-y-12 md:space-y-16">
+              {[
+                {
+                  step: 1,
+                  title: 'Connect',
+                  desc: 'OAuth to Gmail + Calendar. Your credentials, encrypted at rest.',
+                  icon: '🔐',
+                },
+                {
+                  step: 2,
+                  title: 'Ingest',
+                  desc: 'Inngest orchestrates incremental sync. Only new data, no duplicates.',
+                  icon: '📥',
+                },
+                {
+                  step: 3,
+                  title: 'Protect',
+                  desc: 'Nightfall DLP scans everything. PII is redacted or quarantined.',
+                  icon: '🛡️',
+                },
+                {
+                  step: 4,
+                  title: 'Search',
+                  desc: 'pgvector embeddings enable semantic search. Find what matters.',
+                  icon: '🔍',
+                },
+              ].map(({ step, title, desc, icon }, idx) => (
+                <div
+                  key={step}
+                  className={`relative flex flex-col md:flex-row items-center gap-6 ${
+                    idx % 2 === 1 ? 'md:flex-row-reverse' : ''
+                  }`}
+                >
+                  {/* Content */}
+                  <div className={`flex-1 ${idx % 2 === 1 ? 'md:text-right' : ''}`}>
+                    <Card hover padding="md" className="inline-block max-w-sm">
+                      <CardContent className="!mt-0">
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className="text-2xl">{icon}</span>
+                          <h3 className="text-display-xs font-semibold text-neutral-900">{title}</h3>
+                        </div>
+                        <p className="text-body-md text-neutral-600">{desc}</p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Step number */}
+                  <div className="relative z-10 w-12 h-12 rounded-full bg-primary-600 text-white flex items-center justify-center font-bold text-lg shadow-md">
+                    {step}
+                  </div>
+
+                  {/* Spacer for alignment */}
+                  <div className="flex-1 hidden md:block" />
+                </div>
+              ))}
             </div>
           </div>
-          <div className="mt-8 text-center text-sm text-gray-500">
-            &copy; {new Date().getFullYear()} Intent Solutions. All rights reserved.
+        </Container>
+      </Section>
+
+      {/* Final CTA */}
+      <Section background="white" padding="lg" border="top">
+        <Container size="sm">
+          <div className="text-center">
+            <h2 className="text-display-sm font-bold text-neutral-900">
+              See the receipts
+            </h2>
+            <p className="mt-3 text-body-lg text-neutral-600">
+              Every integration verified. Every step auditable.
+            </p>
+            <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4">
+              <Button href="/proof" variant="primary" size="lg">
+                View Proof
+              </Button>
+              <Button
+                href={`https://github.com/intent-solutions-io/executive-intent/commit/${evidence.commit.hash}`}
+                variant="ghost"
+                size="lg"
+                external
+                icon={
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd" />
+                  </svg>
+                }
+              >
+                View on GitHub
+              </Button>
+            </div>
           </div>
-        </div>
-      </footer>
-    </main>
+        </Container>
+      </Section>
+    </BaseLayout>
   );
 }

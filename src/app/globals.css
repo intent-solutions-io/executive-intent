@@ -14,16 +14,90 @@
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    color: var(--foreground);
+    background: var(--background);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      "Helvetica Neue", Arial, sans-serif;
+  }
+
+  /* Smooth scrolling for anchor links */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Focus visible for accessibility */
+  :focus-visible {
+    outline: 2px solid theme('colors.primary.500');
+    outline-offset: 2px;
+  }
 }
 
-/* Custom utilities */
+@layer components {
+  /* Gradient text utility */
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent;
+  }
+
+  /* Prose styling for markdown content */
+  .prose-evidence {
+    @apply text-neutral-700 leading-relaxed;
+  }
+
+  .prose-evidence h1,
+  .prose-evidence h2,
+  .prose-evidence h3 {
+    @apply text-neutral-900 font-semibold;
+  }
+
+  .prose-evidence a {
+    @apply text-primary-600 hover:text-primary-700 underline underline-offset-2;
+  }
+
+  .prose-evidence code {
+    @apply font-mono text-sm bg-neutral-100 px-1.5 py-0.5 rounded;
+  }
+
+  .prose-evidence pre {
+    @apply bg-neutral-900 text-neutral-100 rounded-lg p-4 overflow-x-auto;
+  }
+
+  .prose-evidence pre code {
+    @apply bg-transparent p-0;
+  }
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Animation delay utilities */
+  .animation-delay-100 {
+    animation-delay: 100ms;
+  }
+
+  .animation-delay-200 {
+    animation-delay: 200ms;
+  }
+
+  .animation-delay-300 {
+    animation-delay: 300ms;
   }
 }
