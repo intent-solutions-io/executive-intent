@@ -1,5 +1,5 @@
 import { loadEvidenceSync, getPlaceholderEvidence } from '@/lib/evidence/loadEvidence';
-import { formatCommitHash, formatTimestamp } from '@/lib/evidence/format';
+import { formatCommitHash, formatRationaleShort, formatTimestamp } from '@/lib/evidence/format';
 import { VerificationCriteria } from '@/lib/evidence/types';
 import { BaseLayout } from '@/components/layout';
 import { Button, Card, CardContent, CardHeader, CardTitle, Container, CopyField, Metric, Section, SectionHeader, StatusPill } from '@/components/ui';
@@ -77,6 +77,27 @@ export default function Home() {
 
   const verified = integrations.filter((i) => i.status === 'verified');
   const configured = integrations.filter((i) => i.status !== 'verified');
+  const blockers = configured
+    .slice()
+    .sort((a, b) => {
+      const severity = (s: string) =>
+        s === 'error' ? 5 :
+          s === 'degraded' ? 4 :
+            s === 'configured' ? 3 :
+              s === 'connected' ? 2 :
+                s === 'processing' ? 1 :
+                  0;
+      return severity(b.status) - severity(a.status);
+    })
+    .slice(0, 3);
+
+  const evidenceAnchorByKey: Record<(typeof integrations)[number]['key'], string> = {
+    google_oauth: '/evidence#integration-google-oauth',
+    inngest: '/evidence#integration-inngest',
+    nightfall: '/evidence#integration-nightfall',
+    supabase: '/evidence#integration-supabase',
+    embeddings: '/evidence#integration-embeddings',
+  };
 
   return (
     <BaseLayout currentPath="/" evidenceGeneratedAt={evidence.generated_at}>
@@ -99,8 +120,22 @@ export default function Home() {
                 Executive Intent
               </h1>
               <p className="mt-4 text-body-xl text-neutral-700 max-w-prose-wide">
-                Proof-first pipeline from Gmail/Calendar → DLP → Vector store → Retrieval.
+                Proof-first security pipeline that turns Gmail/Calendar into a governed, DLP-screened knowledge base — and proves retrieval with receipts tied to build + deploy.
               </p>
+              <ul className="mt-6 space-y-2 text-body-sm text-neutral-800">
+                <li className="flex gap-2">
+                  <span className="text-neutral-500">•</span>
+                  <span>Ingest: OAuth-sourced email + calendar metadata.</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-neutral-500">•</span>
+                  <span>Enforce: Nightfall DLP outcomes (allow/redact/quarantine).</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-neutral-500">•</span>
+                  <span>Index + prove: pgvector coverage + deterministic retrieval tests with provenance.</span>
+                </li>
+              </ul>
 
               <div className="mt-8 flex flex-col sm:flex-row gap-3">
                 <Button href="/evidence" variant="primary" size="lg" className="w-full sm:w-auto">
@@ -121,8 +156,8 @@ export default function Home() {
                   <CardTitle as="h2" className="text-display-sm">
                     System Status
                   </CardTitle>
-                  <p className="mt-1 text-body-sm text-neutral-700">
-                    Pipeline health and key signals from the evidence bundle.
+                  <p className="mt-1 text-body-sm text-neutral-800">
+                    Green only means verified. Everything else is explicit about what’s missing.
                   </p>
                 </CardHeader>
                 <CardContent>
@@ -136,6 +171,34 @@ export default function Home() {
                       size="sm"
                     />
                   </dl>
+
+                  {blockers.length > 0 && (
+                    <div className="mt-6 pt-5 border-t border-neutral-200">
+                      <div className="text-body-sm font-semibold text-neutral-900">Top blockers to “Verified”</div>
+                      <ul className="mt-3 space-y-3">
+                        {blockers.map((b) => {
+                          const integration = evidence.integrations[b.key as keyof typeof evidence.integrations];
+                          return (
+                            <li key={b.key} className="flex items-start justify-between gap-4">
+                              <div className="min-w-0">
+                                <div className="text-body-sm font-semibold text-neutral-900">{b.label}</div>
+                                <div className="mt-1 text-body-xs text-neutral-800">
+                                  {formatRationaleShort(integration.rationale)}
+                                </div>
+                                <a
+                                  href={evidenceAnchorByKey[b.key]}
+                                  className="mt-2 inline-flex text-body-xs font-medium text-primary-700 hover:text-primary-800"
+                                >
+                                  View receipt →
+                                </a>
+                              </div>
+                              <StatusPill status={b.status} size="sm" />
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -275,7 +338,7 @@ export default function Home() {
                       <li key={i.key} className="flex items-start justify-between gap-4">
                         <div className="min-w-0">
                           <div className="text-body-md font-medium text-neutral-900">{i.label}</div>
-                          <div className="mt-1 text-body-sm text-neutral-700">{getStatusNote(i.status)}</div>
+                          <div className="mt-1 text-body-sm text-neutral-800">{getStatusNote(i.status)}</div>
                         </div>
                         <StatusPill status={i.status} size="sm" />
                       </li>
@@ -297,7 +360,7 @@ export default function Home() {
                     <li key={i.key} className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
                         <div className="text-body-md font-medium text-neutral-900">{i.label}</div>
-                        <div className="mt-1 text-body-sm text-neutral-700">{getStatusNote(i.status)}</div>
+                        <div className="mt-1 text-body-sm text-neutral-800">{getStatusNote(i.status)}</div>
                         <div className="mt-2 text-body-xs text-neutral-700">
                           To verify:{' '}
                           <span className="text-neutral-800">

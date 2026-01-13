@@ -22,7 +22,7 @@ function NavLink({ href, children, active, onClick }: NavLinkProps) {
         'text-body-sm font-medium transition-colors',
         active
           ? 'text-neutral-900'
-          : 'text-neutral-700 hover:text-neutral-900'
+          : 'text-neutral-900/80 hover:text-neutral-900'
       )}
     >
       {children}
@@ -85,11 +85,11 @@ export function Nav({ currentPath = '/' }: NavProps) {
               aria-expanded={mobileMenuOpen}
             >
               {mobileMenuOpen ? (
-                <svg className="w-6 h-6 text-neutral-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-6 h-6 text-neutral-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               ) : (
-                <svg className="w-6 h-6 text-neutral-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-6 h-6 text-neutral-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               )}
@@ -112,7 +112,7 @@ export function Nav({ currentPath = '/' }: NavProps) {
                     'block px-4 py-3 rounded-lg text-body-md font-medium transition-colors',
                     currentPath === href
                       ? 'bg-neutral-100 text-neutral-900'
-                      : 'text-neutral-700 hover:bg-neutral-50'
+                      : 'text-neutral-900/80 hover:bg-neutral-50 hover:text-neutral-900'
                   )}
                 >
                   {label}
@@ -158,17 +158,17 @@ export function Footer({ evidenceGeneratedAt }: FooterProps) {
             </div>
 
             <div className="grid grid-cols-2 gap-x-12 gap-y-3 text-body-sm">
-              <Link href="/proof" className="text-neutral-700 hover:text-neutral-900 transition-colors">
+              <Link href="/proof" className="text-neutral-900/80 hover:text-neutral-900 transition-colors">
                 Proof
               </Link>
-              <Link href="/evidence" className="text-neutral-700 hover:text-neutral-900 transition-colors">
+              <Link href="/evidence" className="text-neutral-900/80 hover:text-neutral-900 transition-colors">
                 Evidence
               </Link>
               <a
                 href="https://github.com/intent-solutions-io/executive-intent"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-neutral-700 hover:text-neutral-900 transition-colors"
+                className="text-neutral-900/80 hover:text-neutral-900 transition-colors"
               >
                 Repository
               </a>

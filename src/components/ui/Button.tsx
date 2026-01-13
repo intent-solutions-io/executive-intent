@@ -22,8 +22,8 @@ interface ButtonProps {
 const variantStyles: Record<ButtonVariant, string> = {
   primary: 'bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800 border-transparent',
   secondary: 'bg-neutral-900 text-white hover:bg-neutral-800 active:bg-neutral-700 border-transparent',
-  ghost: 'bg-transparent text-neutral-700 hover:bg-neutral-100 active:bg-neutral-200 border-transparent',
-  outline: 'bg-white text-neutral-700 hover:bg-neutral-50 active:bg-neutral-100 border-neutral-300',
+  ghost: 'bg-transparent text-neutral-900 hover:bg-neutral-100 active:bg-neutral-200 border-transparent',
+  outline: 'bg-white text-neutral-900 hover:bg-neutral-50 active:bg-neutral-100 border-neutral-300',
 };
 
 const sizeStyles: Record<ButtonSize, string> = {

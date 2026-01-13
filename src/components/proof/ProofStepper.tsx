@@ -197,7 +197,7 @@ export function ProofStepper({ evidence }: { evidence: EvidenceBundle }) {
                     }}
                     className={cn(
                       'w-full flex items-start gap-3 rounded-xl px-3 py-2 text-left transition-colors',
-                      active ? 'bg-neutral-100 text-neutral-900' : 'text-neutral-700 hover:bg-neutral-50'
+                      active ? 'bg-neutral-100 text-neutral-900' : 'text-neutral-900/80 hover:bg-neutral-50 hover:text-neutral-900'
                     )}
                   >
                     <span
