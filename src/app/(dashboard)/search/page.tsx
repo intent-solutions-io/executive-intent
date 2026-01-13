@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { Button, Card, CardContent, CardHeader, CardTitle, SectionHeader } from "@/components/ui";
+import { cn } from "@/lib/utils";
 
 interface SearchResult {
   id: string;
@@ -16,6 +18,13 @@ export default function SearchPage() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+
+  const examples = [
+    "What did I commit to this week?",
+    "Show me threads about budget",
+    "Meetings with John next week",
+    "Open loops I need to follow up on",
+  ];
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,120 +48,145 @@ export default function SearchPage() {
 
   return (
     <div>
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Search</h1>
-        <p className="text-gray-600">
-          Search across your emails and calendar events.
-        </p>
-      </div>
+      <SectionHeader
+        title="Search"
+        description="Query indexed content across sources. Results should always be source-linked and auditable."
+        actions={
+          <Button href="/evidence#retrieval-test" variant="outline" size="md">
+            View retrieval receipts →
+          </Button>
+        }
+      />
 
-      {/* Search Box */}
-      <form onSubmit={handleSearch} className="mb-8">
-        <div className="flex gap-4">
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="What did I commit to this week? Search emails and events..."
-            className="flex-1 border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-          />
-          <button
-            type="submit"
-            disabled={isSearching}
-            className="bg-primary-600 text-white px-8 py-3 rounded-xl font-medium hover:bg-primary-700 transition disabled:opacity-50"
-          >
-            {isSearching ? "Searching..." : "Search"}
-          </button>
-        </div>
-      </form>
+      <div className="mt-8">
+        <Card>
+          <CardHeader>
+            <CardTitle as="h2" className="text-display-sm">
+              Ask or Search
+            </CardTitle>
+            <p className="mt-2 text-body-sm text-neutral-800">
+              Uses vector retrieval when embeddings exist; otherwise returns an empty result set (truthfully).
+            </p>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3">
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="What did I commit to this week?"
+                className={cn(
+                  "w-full flex-1 rounded-lg border border-neutral-300 bg-white px-4 py-3 text-body-md text-neutral-900",
+                  "placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                )}
+              />
+              <Button
+                type="submit"
+                disabled={isSearching}
+                variant="primary"
+                size="lg"
+                className="w-full sm:w-auto"
+              >
+                {isSearching ? "Searching..." : "Search"}
+              </Button>
+            </form>
 
-      {/* Example Queries */}
-      <div className="mb-8">
-        <h2 className="text-sm font-medium text-gray-500 mb-3">Try asking:</h2>
-        <div className="flex flex-wrap gap-2">
-          {[
-            "What did I commit to this week?",
-            "Show me threads about budget",
-            "Meetings with John next week",
-            "Open loops I need to follow up on",
-          ].map((example) => (
-            <button
-              key={example}
-              onClick={() => setQuery(example)}
-              className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition"
-            >
-              {example}
-            </button>
-          ))}
-        </div>
+            <div className="mt-6">
+              <div className="text-body-sm font-semibold text-neutral-900">Try asking</div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {examples.map((example) => (
+                  <button
+                    key={example}
+                    type="button"
+                    onClick={() => setQuery(example)}
+                    className={cn(
+                      "inline-flex items-center rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-body-sm font-medium",
+                      "text-neutral-900/80 hover:text-neutral-900 hover:bg-neutral-50 transition-colors"
+                    )}
+                  >
+                    {example}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Results */}
-      <div className="space-y-4">
+      <div className="mt-8 space-y-4">
         {results.length === 0 && query && !isSearching && (
-          <div className="bg-white rounded-xl shadow-sm p-8 text-center">
-            <div className="text-4xl mb-4">🔍</div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No results found
-            </h3>
-            <p className="text-gray-500">
-              Try a different search or connect your Google account to start
-              indexing.
-            </p>
-          </div>
+          <Card>
+            <CardContent className="py-10">
+              <div className="text-center">
+                <div className="text-4xl">🔍</div>
+                <div className="mt-4 text-display-sm font-semibold text-neutral-900">No results</div>
+                <p className="mt-2 text-body-sm text-neutral-800">
+                  Try a different query or connect sources so content can be ingested and indexed.
+                </p>
+                <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+                  <Button href="/connections" variant="primary" size="md" className="w-full sm:w-auto">
+                    Open Connections
+                  </Button>
+                  <Button href="/evidence" variant="outline" size="md" className="w-full sm:w-auto">
+                    View Evidence →
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {results.map((result) => (
-          <div
-            key={result.id}
-            className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition"
-          >
-            <div className="flex items-start gap-4">
-              <div
-                className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                  result.source === "gmail" ? "bg-red-100" : "bg-blue-100"
-                }`}
-              >
-                <span className="text-xl">
-                  {result.source === "gmail" ? "📧" : "📅"}
-                </span>
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-medium text-gray-900">{result.title}</h3>
-                  <span className="text-xs text-gray-400">
-                    {Math.round(result.similarity * 100)}% match
+          <Card key={result.id} hover>
+            <CardContent className="!mt-0">
+              <div className="flex items-start gap-4">
+                <div
+                  className={cn(
+                    "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
+                    result.source === "gmail" ? "bg-status-error-bg text-status-error-text" : "bg-status-processing-bg text-status-processing-text"
+                  )}
+                >
+                  <span className="text-xl" aria-hidden="true">
+                    {result.source === "gmail" ? "📧" : "📅"}
                   </span>
                 </div>
-                <p className="text-sm text-gray-600 mb-2">{result.snippet}</p>
-                <div className="flex items-center gap-4 text-xs text-gray-500">
-                  <span>{result.timestamp}</span>
-                  <span>•</span>
-                  <span>{result.participants.join(", ")}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-baseline gap-2">
+                    <div className="text-body-md font-semibold text-neutral-900 truncate">{result.title}</div>
+                    <div className="text-body-xs text-neutral-800 font-mono">
+                      {Math.round(result.similarity * 100)}% match
+                    </div>
+                  </div>
+                  <p className="mt-2 text-body-sm text-neutral-800">{result.snippet}</p>
+                  <div className="mt-3 flex flex-wrap gap-3 text-body-xs text-neutral-800">
+                    <span className="font-mono">{result.timestamp}</span>
+                    <span className="text-neutral-500">•</span>
+                    <span className="truncate">{result.participants.join(", ")}</span>
+                  </div>
                 </div>
+                <Button variant="ghost" size="sm" onClick={() => {}}>
+                  Open →
+                </Button>
               </div>
-              <button className="text-primary-600 hover:text-primary-700 text-sm font-medium">
-                Open →
-              </button>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         ))}
-      </div>
 
-      {/* Empty State */}
-      {!query && results.length === 0 && (
-        <div className="bg-white rounded-xl shadow-sm p-8 text-center">
-          <div className="text-4xl mb-4">🔎</div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
-            Start searching
-          </h3>
-          <p className="text-gray-500">
-            Enter a query above to search across your indexed emails and
-            calendar events. All results include source links for verification.
-          </p>
-        </div>
-      )}
+        {!query && results.length === 0 && (
+          <Card>
+            <CardContent className="py-10">
+              <div className="text-center">
+                <div className="text-4xl">🔎</div>
+                <div className="mt-4 text-display-sm font-semibold text-neutral-900">Start searching</div>
+                <p className="mt-2 text-body-sm text-neutral-800">
+                  Enter a query to search across indexed emails and calendar events. Evidence receipts show if retrieval is verified.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

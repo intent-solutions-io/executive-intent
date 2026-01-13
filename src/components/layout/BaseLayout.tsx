@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { ReactNode, useState } from 'react';
 import { Container } from '@/components/ui';
 import { cn } from '@/lib/utils';
@@ -206,9 +207,12 @@ interface BaseLayoutProps {
 }
 
 export function BaseLayout({ children, currentPath, evidenceGeneratedAt }: BaseLayoutProps) {
+  const pathname = usePathname();
+  const resolvedPath = currentPath ?? pathname ?? '/';
+
   return (
     <div className="flex min-h-screen flex-col">
-      <Nav currentPath={currentPath} />
+      <Nav currentPath={resolvedPath} />
       <main className="flex-1">{children}</main>
       <Footer evidenceGeneratedAt={evidenceGeneratedAt} />
     </div>
