@@ -62,14 +62,14 @@ interface ContainerProps {
 const containerSizes = {
   sm: 'max-w-3xl',
   md: 'max-w-5xl',
-  lg: 'max-w-7xl',
-  xl: 'max-w-8xl',
+  lg: 'max-w-6xl',
+  xl: 'max-w-7xl',
   full: 'max-w-full',
 };
 
 export function Container({ children, className, size = 'lg' }: ContainerProps) {
   return (
-    <div className={cn('mx-auto px-4 sm:px-6 lg:px-8', containerSizes[size], className)}>
+    <div className={cn('mx-auto px-4 sm:px-6 lg:px-6', containerSizes[size], className)}>
       {children}
     </div>
   );
@@ -80,16 +80,30 @@ interface SectionHeaderProps {
   description?: string;
   className?: string;
   centered?: boolean;
+  actions?: ReactNode;
 }
 
-export function SectionHeader({ title, description, className, centered = false }: SectionHeaderProps) {
+export function SectionHeader({ title, description, className, centered = false, actions }: SectionHeaderProps) {
   return (
-    <div className={cn(centered && 'text-center', className)}>
-      <h2 className="text-display-sm font-bold text-neutral-900">{title}</h2>
-      {description && (
-        <p className="mt-3 text-body-lg text-neutral-600 max-w-prose-wide">
-          {description}
-        </p>
+    <div
+      className={cn(
+        'flex flex-col gap-4',
+        centered ? 'items-center text-center' : 'sm:flex-row sm:items-end sm:justify-between',
+        className
+      )}
+    >
+      <div className={cn('min-w-0', centered && 'flex flex-col items-center')}>
+        <h2 className="text-display-md font-semibold text-neutral-900 tracking-tight">{title}</h2>
+        {description && (
+          <p className={cn('mt-2 text-body-lg text-neutral-700 max-w-prose-wide', centered && 'mx-auto')}>
+            {description}
+          </p>
+        )}
+      </div>
+      {actions && (
+        <div className={cn('flex flex-col sm:flex-row gap-3', centered && 'justify-center')}>
+          {actions}
+        </div>
       )}
     </div>
   );

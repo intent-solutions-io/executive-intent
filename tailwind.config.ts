@@ -75,17 +75,22 @@ export default {
       },
       // Typography scale (Stripe/Vercel inspired)
       fontSize: {
-        "display-2xl": ["4.5rem", { lineHeight: "1.1", letterSpacing: "-0.02em" }],
-        "display-xl": ["3.75rem", { lineHeight: "1.1", letterSpacing: "-0.02em" }],
-        "display-lg": ["3rem", { lineHeight: "1.1", letterSpacing: "-0.02em" }],
-        "display-md": ["2.25rem", { lineHeight: "1.2", letterSpacing: "-0.02em" }],
-        "display-sm": ["1.875rem", { lineHeight: "1.2", letterSpacing: "-0.01em" }],
-        "display-xs": ["1.5rem", { lineHeight: "1.3", letterSpacing: "-0.01em" }],
-        "body-xl": ["1.25rem", { lineHeight: "1.6" }],
-        "body-lg": ["1.125rem", { lineHeight: "1.6" }],
-        "body-md": ["1rem", { lineHeight: "1.6" }],
-        "body-sm": ["0.875rem", { lineHeight: "1.5" }],
-        "body-xs": ["0.75rem", { lineHeight: "1.5" }],
+        // Headings
+        "display-2xl": ["2.75rem", { lineHeight: "1.08", letterSpacing: "-0.03em" }], // 44px
+        "display-xl": ["2.375rem", { lineHeight: "1.12", letterSpacing: "-0.02em" }], // 38px
+        "display-lg": ["2rem", { lineHeight: "1.15", letterSpacing: "-0.02em" }], // 32px
+        "display-md": ["1.5rem", { lineHeight: "1.25", letterSpacing: "-0.015em" }], // 24px
+        "display-sm": ["1.25rem", { lineHeight: "1.3", letterSpacing: "-0.01em" }], // 20px
+        "display-xs": ["1.125rem", { lineHeight: "1.35", letterSpacing: "-0.01em" }], // 18px
+        // Numbers / metrics
+        "metric-lg": ["2rem", { lineHeight: "1.15", letterSpacing: "-0.02em" }], // 32px
+        "metric-md": ["1.5rem", { lineHeight: "1.2", letterSpacing: "-0.015em" }], // 24px
+        // Body
+        "body-xl": ["1.0625rem", { lineHeight: "1.7" }], // 17px
+        "body-lg": ["1rem", { lineHeight: "1.7" }], // 16px
+        "body-md": ["0.9375rem", { lineHeight: "1.65" }], // 15px
+        "body-sm": ["0.875rem", { lineHeight: "1.6" }], // 14px
+        "body-xs": ["0.8125rem", { lineHeight: "1.55" }], // 13px
         "label": ["0.75rem", { lineHeight: "1", letterSpacing: "0.05em" }],
       },
       // Spacing scale

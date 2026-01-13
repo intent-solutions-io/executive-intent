@@ -79,29 +79,107 @@ export async function checkSupabase(): Promise<SupabaseIntegration & { stats?: S
       .limit(1);
 
     const pgvectorEnabled = !vectorError;
+    if (!pgvectorEnabled) {
+      return buildResult('error', ['INVALID_CONFIG'], {
+        error: vectorError?.message,
+        note: 'pgvector/embedding column not reachable',
+      }, { project_ref: projectRef });
+    }
 
     // Check 4: Get detailed counts
     const documentCount = docsResult.count || 0;
     const chunkCount = chunksResult.count || 0;
 
     // Count vectors (chunks with non-null embeddings)
-    const { count: vectorCount } = await supabase
+    const { count: vectorCount, error: vectorCountError } = await supabase
       .from('document_chunks')
       .select('id', { count: 'exact', head: true })
       .not('embedding', 'is', null);
 
-    // Count documents that have at least one chunk
-    const { count: docsWithChunksCount } = await supabase
-      .from('documents')
-      .select('id', { count: 'exact', head: true })
-      .filter('id', 'in', `(SELECT DISTINCT document_id FROM document_chunks)`);
+    if (vectorCountError) {
+      return buildResult('error', ['API_UNREACHABLE'], {
+        error: vectorCountError.message,
+        note: 'Could not count embedded vectors',
+      }, { project_ref: projectRef });
+    }
 
-    // For stats, we need more granular counts
-    // Documents with chunks
+    // Most recent vector insert (used to distinguish "processing" vs "stuck")
+    const { data: latestVectorChunk, error: latestVectorError } = await supabase
+      .from('document_chunks')
+      .select('created_at')
+      .not('embedding', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (latestVectorError) {
+      return buildResult('error', ['API_UNREACHABLE'], {
+        error: latestVectorError.message,
+        note: 'Could not determine last_index_at from document_chunks',
+      }, { project_ref: projectRef });
+    }
+
+    const lastIndexAt = latestVectorChunk?.[0]?.created_at || null;
+
+    // DLP breakdown to interpret expected mismatches (quarantined docs are not embedded)
+    const [allowedResult, redactedResult, quarantinedResult, pendingResult] = await Promise.all([
+      supabase.from('documents').select('id', { count: 'exact', head: true }).eq('dlp_status', 'allowed'),
+      supabase.from('documents').select('id', { count: 'exact', head: true }).eq('dlp_status', 'redacted'),
+      supabase.from('documents').select('id', { count: 'exact', head: true }).eq('dlp_status', 'quarantined'),
+      supabase.from('documents').select('id', { count: 'exact', head: true }).eq('dlp_status', 'pending'),
+    ]);
+
+    const dlpErrors = [allowedResult.error, redactedResult.error, quarantinedResult.error, pendingResult.error].filter(Boolean);
+    if (dlpErrors.length > 0) {
+      return buildResult('error', ['API_UNREACHABLE'], {
+        note: 'Could not compute DLP status breakdown',
+        errors: dlpErrors.map(e => e?.message),
+      }, { project_ref: projectRef });
+    }
+
+    const eligibleDocs = (allowedResult.count || 0) + (redactedResult.count || 0);
+    const quarantinedDocs = quarantinedResult.count || 0;
+    const pendingDocs = pendingResult.count || 0;
+
+    // Documents with chunks/vectors (document-level counts)
+    const [{ count: docsWithChunksCount, error: docsWithChunksError }, { count: docsWithVectorsCount, error: docsWithVectorsError }] = await Promise.all([
+      supabase
+        .from('documents')
+        .select('id, document_chunks!inner(id)', { count: 'exact', head: true }),
+      supabase
+        .from('documents')
+        .select('id, document_chunks!inner(id)', { count: 'exact', head: true })
+        .not('document_chunks.embedding', 'is', null),
+    ]);
+
+    if (docsWithChunksError || docsWithVectorsError) {
+      return buildResult('error', ['API_UNREACHABLE'], {
+        note: 'Could not compute document-level chunk/vector coverage',
+        errors: [docsWithChunksError?.message, docsWithVectorsError?.message].filter(Boolean),
+      }, { project_ref: projectRef });
+    }
+
+    // Eligible documents with chunks/vectors (to avoid greenwashing due to quarantined/pending docs)
+    const [{ count: eligibleWithChunks, error: eligibleChunksError }, { count: eligibleWithVectors, error: eligibleVectorsError }] = await Promise.all([
+      supabase
+        .from('documents')
+        .select('id, document_chunks!inner(id)', { count: 'exact', head: true })
+        .in('dlp_status', ['allowed', 'redacted']),
+      supabase
+        .from('documents')
+        .select('id, document_chunks!inner(id)', { count: 'exact', head: true })
+        .in('dlp_status', ['allowed', 'redacted'])
+        .not('document_chunks.embedding', 'is', null),
+    ]);
+
+    if (eligibleChunksError || eligibleVectorsError) {
+      return buildResult('error', ['API_UNREACHABLE'], {
+        note: 'Could not compute eligible document coverage',
+        errors: [eligibleChunksError?.message, eligibleVectorsError?.message].filter(Boolean),
+      }, { project_ref: projectRef });
+    }
+
     const documentsChunked = docsWithChunksCount || 0;
-
-    // Documents with embeddings (approximation: if vectorCount > 0, some docs have embeddings)
-    const documentsEmbedded = vectorCount && vectorCount > 0 ? Math.min(documentsChunked, Math.ceil(vectorCount / Math.max(chunkCount / Math.max(documentCount, 1), 1))) : 0;
+    const documentsEmbedded = docsWithVectorsCount || 0;
 
     const stats: SupabaseStats = {
       documents_total: documentCount,
@@ -122,44 +200,59 @@ export async function checkSupabase(): Promise<SupabaseIntegration & { stats?: S
       chunk_count: chunkCount,
       vector_count: vectorCount || 0,
       pgvector: pgvectorEnabled,
+      dlp_breakdown: {
+        pending: pendingDocs,
+        allowed: allowedResult.count || 0,
+        redacted: redactedResult.count || 0,
+        quarantined: quarantinedDocs,
+      },
+      documents_with_chunks: documentsChunked,
+      documents_with_vectors: documentsEmbedded,
+      eligible_documents: eligibleDocs,
+      eligible_with_chunks: eligibleWithChunks || 0,
+      eligible_with_vectors: eligibleWithVectors || 0,
     };
 
+    // Connected if reachable; verified only if eligible documents reconcile to vectors/chunks.
     if (documentCount === 0) {
-      // Connected but no data
       status = 'connected';
-      reason_codes = ['NO_DATA_OBSERVED'];
-      details.note = 'Database connected, awaiting first document sync';
-    } else if (chunkCount === 0) {
-      // Has docs but no chunks - something wrong
-      status = 'degraded';
-      reason_codes = ['DOC_CHUNK_MISMATCH'];
-      details.note = `${documentCount} documents but 0 chunks - chunking pipeline may have failed`;
-    } else if ((vectorCount || 0) === 0 && pgvectorEnabled) {
-      // Has chunks but no embeddings
-      status = 'processing';
-      reason_codes = ['DOC_VECTOR_MISMATCH'];
-      details.note = `${chunkCount} chunks but 0 embeddings - embedding pipeline in progress or failed`;
+      reason_codes = ['NO_DATA_OBSERVED_YET'];
+      details.note = 'Supabase reachable; no documents observed yet';
+    } else if (eligibleDocs === 0) {
+      status = 'connected';
+      reason_codes = ['NO_DATA_OBSERVED_YET'];
+      details.note = `Supabase reachable; ${pendingDocs} pending, ${quarantinedDocs} quarantined (no eligible docs for embedding yet)`;
     } else {
-      // Check consistency: are counts reasonable?
-      const chunkRatio = chunkCount / documentCount;
-      const vectorRatio = (vectorCount || 0) / chunkCount;
+      const eligibleChunkCoverage = (eligibleWithChunks || 0) / Math.max(eligibleDocs, 1);
+      const eligibleVectorCoverage = (eligibleWithVectors || 0) / Math.max(eligibleDocs, 1);
 
-      if (vectorRatio < 0.5) {
-        // Less than 50% of chunks have embeddings
-        status = 'processing';
-        reason_codes = ['DOC_VECTOR_MISMATCH'];
-        details.note = `Only ${Math.round(vectorRatio * 100)}% of chunks have embeddings`;
-        details.vector_ratio = vectorRatio;
-      } else if (vectorRatio >= 0.9) {
-        // 90%+ chunks have embeddings - verified
+      details.eligible_chunk_coverage = eligibleChunkCoverage;
+      details.eligible_vector_coverage = eligibleVectorCoverage;
+
+      // Consider "processing" only when there's evidence of fresh indexing.
+      const recentIndexThreshold = new Date(Date.now() - 30 * 60 * 1000);
+      const hasRecentIndex = lastIndexAt ? new Date(lastIndexAt) > recentIndexThreshold : false;
+      details.last_index_at = lastIndexAt;
+      details.has_recent_index = hasRecentIndex;
+
+      const missingChunks = (eligibleWithChunks || 0) < eligibleDocs;
+      const missingVectors = (eligibleWithVectors || 0) < eligibleDocs;
+
+      if (!missingChunks && !missingVectors) {
         status = 'verified';
         reason_codes = ['ALL_CHECKS_PASSED', 'DATA_FLOWING'];
-        details.note = `${Math.round(vectorRatio * 100)}% of chunks embedded`;
-      } else {
-        // Between 50-90%
+        details.note = `Eligible docs reconcile (${eligibleDocs}/${eligibleDocs} chunked, ${eligibleDocs}/${eligibleDocs} embedded)`;
+      } else if (hasRecentIndex) {
         status = 'processing';
         reason_codes = ['DATA_FLOWING'];
-        details.note = `${Math.round(vectorRatio * 100)}% of chunks embedded - processing`;
+        details.note = `Indexing in progress (${eligibleWithVectors || 0}/${eligibleDocs} embedded)`;
+      } else {
+        status = 'degraded';
+        reason_codes = [
+          ...(missingChunks ? (['DOC_CHUNK_MISMATCH'] as ReasonCode[]) : []),
+          ...(missingVectors ? (['DOC_VECTOR_MISMATCH'] as ReasonCode[]) : []),
+        ];
+        details.note = `Coverage mismatch (eligible: ${eligibleDocs}, chunked: ${eligibleWithChunks || 0}, embedded: ${eligibleWithVectors || 0})`;
       }
     }
 

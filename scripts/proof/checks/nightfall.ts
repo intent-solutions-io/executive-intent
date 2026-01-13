@@ -33,25 +33,79 @@ export async function checkNightfall(): Promise<NightfallIntegration> {
     });
   }
 
+  // Check 2: API reachable / key valid (probe scan)
+  try {
+    const probeBody = {
+      payload: ['Executive Intent DLP probe'],
+      config: {
+        detectionRules: [
+          {
+            logicalOp: 'ANY',
+            detectors: [
+              {
+                detectorType: 'NIGHTFALL_DETECTOR',
+                nightfallDetector: 'EMAIL_ADDRESS',
+                minConfidence: 'POSSIBLE',
+                minNumFindings: 1,
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+    const resp = await fetch('https://api.nightfall.ai/v3/scan', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(probeBody),
+    });
+
+    if (!resp.ok) {
+      const status = resp.status;
+      const bodyText = await resp.text().catch(() => '');
+      if (status === 401 || status === 403) {
+        return buildResult('error', ['AUTH_FAILED'], {
+          note: 'Nightfall API key rejected by Nightfall API',
+          api_status: status,
+          error: bodyText || `HTTP ${status}`,
+        });
+      }
+      return buildResult('error', ['API_UNREACHABLE'], {
+        note: 'Nightfall API probe failed',
+        api_status: status,
+        error: bodyText || `HTTP ${status}`,
+      });
+    }
+  } catch (error) {
+    return buildResult('error', ['API_UNREACHABLE'], {
+      note: 'Nightfall API probe failed',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+
   // Check for actual scan data in Supabase
   const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
-    // Can't verify scans without Supabase - API key is configured
-    return buildResult('configured', ['NO_DATA_OBSERVED'], {
-      note: 'Nightfall API key configured, cannot check scan history (no Supabase access)',
+    // API reachable, but can't verify scan history without Supabase
+    return buildResult('connected', ['ALL_CHECKS_PASSED'], {
+      note: 'Nightfall API reachable; cannot check scan history (no Supabase access)',
     });
   }
 
   try {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Query documents for DLP status counts
-    const [allowedResult, redactedResult, quarantinedResult] = await Promise.all([
+    // Query documents for DLP status counts (+ pending backlog)
+    const [allowedResult, redactedResult, quarantinedResult, pendingResult] = await Promise.all([
       supabase.from('documents').select('id', { count: 'exact', head: true }).eq('dlp_status', 'allowed'),
       supabase.from('documents').select('id', { count: 'exact', head: true }).eq('dlp_status', 'redacted'),
       supabase.from('documents').select('id', { count: 'exact', head: true }).eq('dlp_status', 'quarantined'),
+      supabase.from('documents').select('id', { count: 'exact', head: true }).eq('dlp_status', 'pending'),
     ]);
 
     const scanCounts = {
@@ -61,6 +115,7 @@ export async function checkNightfall(): Promise<NightfallIntegration> {
     };
 
     const totalScanned = scanCounts.allowed + scanCounts.redacted + scanCounts.quarantined;
+    const pendingCount = pendingResult.count || 0;
 
     // Get last scan timestamp
     const { data: lastScanDoc } = await supabase
@@ -72,30 +127,31 @@ export async function checkNightfall(): Promise<NightfallIntegration> {
 
     const lastScanAt = lastScanDoc?.[0]?.updated_at || null;
 
-    let status: IntegrationStatus;
-    let reason_codes: ReasonCode[] = [];
+    let status: IntegrationStatus = 'connected';
+    let reason_codes: ReasonCode[] = ['ALL_CHECKS_PASSED'];
     const details: Record<string, unknown> = {
+      api_probe: 'ok',
       scan_counts: scanCounts,
       total_scanned: totalScanned,
+      pending_count: pendingCount,
       last_scan_at: lastScanAt,
     };
 
     if (totalScanned === 0) {
-      // No scans observed - just configured
-      status = 'configured';
-      reason_codes = ['ZERO_SCANS', 'NO_DATA_OBSERVED'];
-      details.note = 'Nightfall API key configured, no DLP scans observed yet';
-    } else if (scanCounts.redacted > 0 || scanCounts.quarantined > 0) {
-      // Have observed actual DLP enforcement (found and handled PII)
-      status = 'verified';
-      reason_codes = ['ALL_CHECKS_PASSED', 'DATA_FLOWING'];
-      details.note = `DLP active: ${scanCounts.allowed} allowed, ${scanCounts.redacted} redacted, ${scanCounts.quarantined} quarantined`;
+      // API reachable, but no DLP outcomes observed yet
+      status = 'connected';
+      reason_codes = ['NO_DATA_OBSERVED_YET', 'ZERO_SCANS'];
+      details.note = 'Nightfall API reachable; no DLP outcomes observed yet';
+    } else if (pendingCount > 0) {
+      // Some documents still pending DLP -> processing
+      status = 'processing';
+      reason_codes = ['DATA_FLOWING'];
+      details.note = `DLP processing: ${totalScanned} processed, ${pendingCount} pending`;
     } else {
-      // Only "allowed" documents - DLP is running and scanned documents
-      // This proves the integration works even if no PII was found
+      // At least one observed allow/redact/quarantine outcome -> verified
       status = 'verified';
       reason_codes = ['ALL_CHECKS_PASSED', 'DATA_FLOWING'];
-      details.note = `DLP verified: ${totalScanned} documents scanned and allowed (no PII detected)`;
+      details.note = `DLP verified: ${scanCounts.allowed} allowed, ${scanCounts.redacted} redacted, ${scanCounts.quarantined} quarantined`;
     }
 
     return buildResult(status, reason_codes, details, {

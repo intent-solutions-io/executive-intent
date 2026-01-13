@@ -1,4 +1,5 @@
-import { EvidenceBundle, isValidEvidence } from './types';
+import { EvidenceBundle } from './types';
+import { normalizeEvidence } from './normalizeEvidence';
 
 // Load evidence from the public directory (for client-side)
 export async function loadEvidence(): Promise<EvidenceBundle | null> {
@@ -9,11 +10,12 @@ export async function loadEvidence(): Promise<EvidenceBundle | null> {
       return null;
     }
     const data = await response.json();
-    if (!isValidEvidence(data)) {
+    const normalized = normalizeEvidence(data);
+    if (!normalized) {
       console.error('Invalid evidence format');
       return null;
     }
-    return data;
+    return normalized;
   } catch (error) {
     console.error('Error loading evidence:', error);
     return null;
@@ -35,11 +37,8 @@ export function loadEvidenceSync(): EvidenceBundle | null {
     const content = fs.readFileSync(evidencePath, 'utf-8');
     const data = JSON.parse(content);
 
-    if (!isValidEvidence(data)) {
-      return null;
-    }
-
-    return data;
+    const normalized = normalizeEvidence(data);
+    return normalized;
   } catch {
     return null;
   }

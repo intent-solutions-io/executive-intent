@@ -53,19 +53,19 @@ export function formatRelativeTime(iso: string | null): string {
 export function getStatusColor(status: IntegrationStatus): string {
   switch (status) {
     case 'verified':
-      return 'text-green-600 bg-green-100';
+      return 'bg-status-verified-bg text-status-verified-text';
     case 'processing':
-      return 'text-blue-600 bg-blue-100';
+      return 'bg-status-processing-bg text-status-processing-text';
     case 'connected':
-      return 'text-cyan-600 bg-cyan-100';
+      return 'bg-status-connected-bg text-status-connected-text';
     case 'configured':
-      return 'text-gray-600 bg-gray-100';
+      return 'bg-status-configured-bg text-status-configured-text';
     case 'degraded':
-      return 'text-yellow-600 bg-yellow-100';
+      return 'bg-status-degraded-bg text-status-degraded-text';
     case 'error':
-      return 'text-red-600 bg-red-100';
+      return 'bg-status-error-bg text-status-error-text';
     default:
-      return 'text-gray-600 bg-gray-100';
+      return 'bg-status-configured-bg text-status-configured-text';
   }
 }
 
@@ -143,6 +143,18 @@ export function formatRationale(rationale: StatusRationale): string {
     return `${note} [${codes}]`;
   }
   return codes;
+}
+
+/**
+ * Format a short rationale (note + first 1–2 reason codes).
+ * Intended for UI summaries where long details belong in the JSON disclosure.
+ */
+export function formatRationaleShort(rationale: StatusRationale, maxCodes = 2): string {
+  const note = rationale.details?.note;
+  const codes = rationale.reason_codes.slice(0, maxCodes).join(', ');
+  if (note && typeof note === 'string' && codes) return `${note} [${codes}]`;
+  if (note && typeof note === 'string') return note;
+  return codes || '—';
 }
 
 // Truncate commit hash

@@ -24,8 +24,7 @@ export interface EmbeddingResult {
  * Generates an embedding for a single text
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
-  // TODO: Fix env loading issue - use Secret Manager in production
-  const apiKey = process.env.OPENAI_API_KEY || "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";
+  const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
     throw new Error("OPENAI_API_KEY not set for embedding generation");

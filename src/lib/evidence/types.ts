@@ -61,6 +61,7 @@ export type ReasonCode =
   | 'TOKEN_EXPIRED'
   | 'NO_TOKEN'
   // Data issues
+  | 'NO_DATA_OBSERVED_YET'
   | 'NO_DATA_OBSERVED'
   | 'DOC_CHUNK_MISMATCH'
   | 'DOC_VECTOR_MISMATCH'

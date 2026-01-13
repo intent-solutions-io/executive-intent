@@ -26,11 +26,9 @@ import type {
   DeployInfo,
   PipelineHealth,
   Integrations,
-  IntegrationStatus,
-  ReasonCode,
 } from '../../src/lib/evidence/types';
-import { getMinimumStatus } from '../../src/lib/evidence/types';
 import { generateEvidenceMarkdown } from '../../src/lib/evidence/format';
+import { computePipelineHealth } from '../../src/lib/evidence/pipelineHealth';
 
 // Get git commit info
 function getCommitInfo(): CommitInfo {
@@ -76,94 +74,6 @@ function getDeployInfo(): DeployInfo {
   };
 }
 
-/**
- * Calculate pipeline health rollup from all integration statuses
- */
-function calculatePipelineHealth(
-  integrations: Integrations,
-  stats?: SupabaseStats
-): PipelineHealth {
-  // Extract all statuses
-  const subsystem_statuses: Record<keyof Integrations, IntegrationStatus> = {
-    supabase: integrations.supabase.status,
-    inngest: integrations.inngest.status,
-    nightfall: integrations.nightfall.status,
-    google_oauth: integrations.google_oauth.status,
-    embeddings: integrations.embeddings.status,
-  };
-
-  // Calculate minimum status across all subsystems
-  const allStatuses = Object.values(subsystem_statuses);
-  const overallStatus = getMinimumStatus(allStatuses);
-
-  // Get document processing stats
-  const documents_total = stats?.documents_total || integrations.supabase.document_count;
-  const documents_chunked = stats?.documents_chunked || 0;
-  const documents_embedded = stats?.documents_embedded || 0;
-  const documents_dlp_scanned = integrations.nightfall.last_scan_counts.allowed +
-    integrations.nightfall.last_scan_counts.redacted +
-    integrations.nightfall.last_scan_counts.quarantined;
-
-  // Fully processed = documents that have been chunked, embedded, AND DLP scanned
-  // Use min of all three as the "fully processed" count
-  const fully_processed = Math.min(
-    documents_chunked,
-    documents_embedded,
-    documents_dlp_scanned
-  );
-
-  // Calculate processing rate
-  const processing_rate = documents_total > 0
-    ? `${fully_processed}/${documents_total} (${Math.round((fully_processed / documents_total) * 100)}%)`
-    : '0/0 (0%)';
-
-  // Build reason codes based on status
-  let reason_codes: ReasonCode[] = [];
-  const details: Record<string, unknown> = {
-    subsystem_statuses,
-  };
-
-  if (overallStatus === 'error') {
-    const errorSystems = Object.entries(subsystem_statuses)
-      .filter(([, status]) => status === 'error')
-      .map(([name]) => name);
-    reason_codes = ['API_UNREACHABLE'];
-    details.error_systems = errorSystems;
-    details.note = `${errorSystems.length} subsystem(s) in error state`;
-  } else if (overallStatus === 'degraded') {
-    const degradedSystems = Object.entries(subsystem_statuses)
-      .filter(([, status]) => status === 'degraded')
-      .map(([name]) => name);
-    reason_codes = ['JOBS_FAILING'];
-    details.degraded_systems = degradedSystems;
-    details.note = `${degradedSystems.length} subsystem(s) degraded`;
-  } else if (overallStatus === 'configured') {
-    reason_codes = ['NO_DATA_OBSERVED'];
-    details.note = 'Integrations configured but no data flowing yet';
-  } else if (overallStatus === 'connected') {
-    reason_codes = ['NO_DATA_OBSERVED'];
-    details.note = 'Integrations connected but minimal data observed';
-  } else if (overallStatus === 'processing') {
-    reason_codes = ['DATA_FLOWING'];
-    details.note = 'Pipeline actively processing data';
-  } else if (overallStatus === 'verified') {
-    reason_codes = ['ALL_CHECKS_PASSED', 'DATA_FLOWING'];
-    details.note = 'All subsystems verified and data flowing';
-  }
-
-  return {
-    status: overallStatus,
-    rationale: { reason_codes, details },
-    subsystem_statuses,
-    documents_total,
-    documents_chunked,
-    documents_embedded,
-    documents_dlp_scanned,
-    fully_processed,
-    processing_rate,
-  };
-}
-
 async function generateEvidence(): Promise<void> {
   console.log('🔍 Generating evidence bundle...\n');
 
@@ -194,7 +104,7 @@ async function generateEvidence(): Promise<void> {
   };
 
   // Calculate pipeline health rollup
-  const pipeline_health = calculatePipelineHealth(integrations, supabaseStats);
+  const pipeline_health = computePipelineHealth(integrations, supabaseStats);
   console.log(`  → Pipeline Health: ${pipeline_health.status} (${pipeline_health.processing_rate})`);
 
   // Build evidence bundle

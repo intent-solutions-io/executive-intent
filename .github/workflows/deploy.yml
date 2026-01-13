@@ -86,14 +86,10 @@ jobs:
           echo "INNGEST_EVENT_KEY=$(gcloud secrets versions access latest --secret=INNGEST_EVENT_KEY --project=${{ env.PROJECT_ID }})" >> $GITHUB_OUTPUT
           echo "INNGEST_SIGNING_KEY=$(gcloud secrets versions access latest --secret=INNGEST_SIGNING_KEY --project=${{ env.PROJECT_ID }})" >> $GITHUB_OUTPUT
           echo "NIGHTFALL_API_KEY=$(gcloud secrets versions access latest --secret=NIGHTFALL_API_KEY --project=${{ env.PROJECT_ID }})" >> $GITHUB_OUTPUT
+          OPENAI_API_KEY="$(gcloud secrets versions access latest --secret=OPENAI_API_KEY --project=${{ env.PROJECT_ID }} 2>/dev/null || true)"
+          echo "OPENAI_API_KEY=$OPENAI_API_KEY" >> $GITHUB_OUTPUT
           echo "GOOGLE_CLIENT_ID=$(gcloud secrets versions access latest --secret=GOOGLE_CLIENT_ID --project=${{ env.PROJECT_ID }})" >> $GITHUB_OUTPUT
           echo "GOOGLE_CLIENT_SECRET=$(gcloud secrets versions access latest --secret=GOOGLE_CLIENT_SECRET --project=${{ env.PROJECT_ID }})" >> $GITHUB_OUTPUT
-
-      - name: Build
-        run: pnpm build
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ steps.secrets.outputs.SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY || 'placeholder-key' }}
 
       - name: Generate evidence bundle
         run: pnpm proof:generate
@@ -103,6 +99,7 @@ jobs:
           INNGEST_EVENT_KEY: ${{ steps.secrets.outputs.INNGEST_EVENT_KEY }}
           INNGEST_SIGNING_KEY: ${{ steps.secrets.outputs.INNGEST_SIGNING_KEY }}
           NIGHTFALL_API_KEY: ${{ steps.secrets.outputs.NIGHTFALL_API_KEY }}
+          OPENAI_API_KEY: ${{ steps.secrets.outputs.OPENAI_API_KEY }}
           GOOGLE_CLIENT_ID: ${{ steps.secrets.outputs.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ steps.secrets.outputs.GOOGLE_CLIENT_SECRET }}
           GITHUB_SHA: ${{ github.sha }}
@@ -114,6 +111,12 @@ jobs:
 
       - name: Verify evidence bundle
         run: pnpm proof:verify
+
+      - name: Build
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ steps.secrets.outputs.SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY || 'placeholder-key' }}
 
       - name: Install Firebase CLI
         run: npm install -g firebase-tools

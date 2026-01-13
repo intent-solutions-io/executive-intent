@@ -7,7 +7,7 @@ import {
   getStatusIcon,
   getStatusLabel,
   formatNumber,
-  formatRationale,
+  formatRationaleShort,
 } from '@/lib/evidence/format';
 
 interface ProofCardProps {
@@ -29,13 +29,13 @@ function ProofCard({ title, status, rationale, details, checkedAt }: ProofCardPr
         </span>
       </div>
 
-      <p className="text-sm text-neutral-500 mb-4 italic">{formatRationale(rationale)}</p>
+      <p className="text-sm text-neutral-700 mb-4 italic">{formatRationaleShort(rationale)}</p>
 
       {/* Details - label above value on mobile */}
       <dl className="space-y-3">
         {details.map(({ label, value }) => (
           <div key={label} className="flex flex-col sm:flex-row sm:justify-between gap-0.5 sm:gap-4 text-sm">
-            <dt className="text-neutral-500">{label}</dt>
+            <dt className="text-neutral-600">{label}</dt>
             <dd className="text-neutral-900 font-mono break-all sm:text-right">
               {typeof value === 'number' ? formatNumber(value) : value}
             </dd>
@@ -65,14 +65,14 @@ function PipelineHealthCard({ evidence }: PipelineHealthCardProps) {
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
         <div>
           <h3 className="font-bold text-lg text-neutral-900">Pipeline Health</h3>
-          <p className="text-sm text-neutral-500">End-to-end processing status</p>
+          <p className="text-sm text-neutral-600">End-to-end processing status</p>
         </div>
         <span className={`px-3 py-1.5 rounded text-sm font-bold self-start whitespace-nowrap ${getStatusColor(ph.status)}`}>
           {getStatusIcon(ph.status)} {getStatusLabel(ph.status)}
         </span>
       </div>
 
-      <p className="text-sm text-neutral-600 mb-4">{formatRationale(ph.rationale)}</p>
+      <p className="text-sm text-neutral-700 mb-4">{formatRationaleShort(ph.rationale)}</p>
 
       {/* Metrics grid - 1 col on mobile, 3 on desktop */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4">

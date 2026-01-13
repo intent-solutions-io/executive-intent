@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ReactNode, useState } from 'react';
 import { Container } from '@/components/ui';
 import { cn } from '@/lib/utils';
+import { formatTimestamp } from '@/lib/evidence/format';
 
 interface NavLinkProps {
   href: string;
@@ -21,7 +22,7 @@ function NavLink({ href, children, active, onClick }: NavLinkProps) {
         'text-body-sm font-medium transition-colors',
         active
           ? 'text-neutral-900'
-          : 'text-neutral-600 hover:text-neutral-900'
+          : 'text-neutral-700 hover:text-neutral-900'
       )}
     >
       {children}
@@ -43,13 +44,13 @@ export function Nav({ currentPath = '/' }: NavProps) {
   ];
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-neutral-200 bg-white/95 backdrop-blur-sm">
+    <nav className="sticky top-0 z-50 border-b border-neutral-200/80 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/70">
       <Container>
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-9 h-9 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg shadow-sm group-hover:shadow-md transition-shadow" />
-            <span className="font-bold text-display-xs text-neutral-900">
+            <div className="w-9 h-9 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl shadow-sm ring-1 ring-primary-500/25 group-hover:shadow-md transition-shadow" />
+            <span className="font-semibold text-display-xs text-neutral-900 tracking-tight">
               Executive Intent
             </span>
           </Link>
@@ -68,7 +69,7 @@ export function Nav({ currentPath = '/' }: NavProps) {
             {/* Desktop CTA */}
             <Link
               href="/proof"
-              className="hidden sm:inline-flex items-center gap-2 bg-neutral-900 text-white px-4 py-2 rounded-lg text-body-sm font-medium hover:bg-neutral-800 transition-colors"
+              className="hidden sm:inline-flex items-center gap-2 bg-neutral-900 text-white px-4 py-2 rounded-lg text-body-sm font-medium hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors"
             >
               View Proof
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -79,7 +80,7 @@ export function Nav({ currentPath = '/' }: NavProps) {
             {/* Hamburger Menu Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-lg hover:bg-neutral-100 transition-colors"
+              className="md:hidden p-2 rounded-lg hover:bg-neutral-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors"
               aria-label="Toggle menu"
               aria-expanded={mobileMenuOpen}
             >
@@ -134,70 +135,60 @@ export function Nav({ currentPath = '/' }: NavProps) {
   );
 }
 
-export function Footer() {
+interface FooterProps {
+  evidenceGeneratedAt?: string;
+}
+
+export function Footer({ evidenceGeneratedAt }: FooterProps) {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-neutral-200 bg-neutral-50">
+    <footer className="border-t border-neutral-200 bg-white/60">
       <Container>
-        <div className="py-12">
+        <div className="py-10">
           <div className="flex flex-col md:flex-row justify-between items-start gap-8">
-            {/* Brand */}
-            <div className="flex flex-col gap-3">
+            <div className="space-y-3">
               <Link href="/" className="flex items-center gap-2">
-                <div className="w-7 h-7 bg-gradient-to-br from-primary-500 to-primary-700 rounded" />
-                <span className="font-semibold text-neutral-900">Executive Intent</span>
+                <div className="w-7 h-7 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg ring-1 ring-primary-500/25" />
+                <span className="font-semibold text-neutral-900 tracking-tight">Executive Intent</span>
               </Link>
-              <p className="text-body-sm text-neutral-500 max-w-xs">
-                Your inbox + calendar, organized for decisions. DLP-enforced. Source-linked.
+              <p className="text-body-sm text-neutral-600 max-w-sm">
+                Proof-first pipeline from Gmail/Calendar → DLP → Vector store → Retrieval.
               </p>
             </div>
 
-            {/* Links */}
-            <div className="flex gap-12">
-              <div>
-                <h4 className="text-label uppercase text-neutral-500 font-semibold mb-3">Product</h4>
-                <ul className="space-y-2">
-                  <li>
-                    <Link href="/proof" className="text-body-sm text-neutral-600 hover:text-neutral-900 transition-colors">
-                      Proof
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="/evidence" className="text-body-sm text-neutral-600 hover:text-neutral-900 transition-colors">
-                      Evidence Bundle
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="text-label uppercase text-neutral-500 font-semibold mb-3">Resources</h4>
-                <ul className="space-y-2">
-                  <li>
-                    <a
-                      href="https://github.com/intent-solutions-io/executive-intent"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-body-sm text-neutral-600 hover:text-neutral-900 transition-colors"
-                    >
-                      GitHub
-                    </a>
-                  </li>
-                </ul>
-              </div>
+            <div className="grid grid-cols-2 gap-x-12 gap-y-3 text-body-sm">
+              <Link href="/proof" className="text-neutral-700 hover:text-neutral-900 transition-colors">
+                Proof
+              </Link>
+              <Link href="/evidence" className="text-neutral-700 hover:text-neutral-900 transition-colors">
+                Evidence
+              </Link>
+              <a
+                href="https://github.com/intent-solutions-io/executive-intent"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-neutral-700 hover:text-neutral-900 transition-colors"
+              >
+                Repository
+              </a>
+              {evidenceGeneratedAt ? (
+                <span className="text-neutral-600">
+                  Evidence: {formatTimestamp(evidenceGeneratedAt)}
+                </span>
+              ) : (
+                <span className="text-neutral-600">Evidence: —</span>
+              )}
             </div>
           </div>
 
-          {/* Bottom bar */}
-          <div className="mt-12 pt-6 border-t border-neutral-200 flex flex-col sm:flex-row justify-between items-center gap-4">
-            <p className="text-body-xs text-neutral-500">
+          <div className="mt-10 pt-6 border-t border-neutral-200 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <p className="text-body-xs text-neutral-600">
               &copy; {currentYear} Intent Solutions. All rights reserved.
             </p>
-            <div className="flex gap-4">
-              <span className="text-body-xs text-neutral-500">
-                Built with Next.js + Supabase + Inngest
-              </span>
-            </div>
+            <span className="text-body-xs text-neutral-600">
+              Next.js • Supabase • Inngest
+            </span>
           </div>
         </div>
       </Container>
@@ -208,14 +199,15 @@ export function Footer() {
 interface BaseLayoutProps {
   children: ReactNode;
   currentPath?: string;
+  evidenceGeneratedAt?: string;
 }
 
-export function BaseLayout({ children, currentPath }: BaseLayoutProps) {
+export function BaseLayout({ children, currentPath, evidenceGeneratedAt }: BaseLayoutProps) {
   return (
     <div className="flex min-h-screen flex-col">
       <Nav currentPath={currentPath} />
       <main className="flex-1">{children}</main>
-      <Footer />
+      <Footer evidenceGeneratedAt={evidenceGeneratedAt} />
     </div>
   );
 }

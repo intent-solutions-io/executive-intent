@@ -46,7 +46,7 @@ export async function checkInngest(): Promise<InngestIntegration> {
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
-    return buildResult('configured', ['NO_DATA_OBSERVED'], {
+    return buildResult('configured', ['NO_DATA_OBSERVED_YET'], {
       note: 'Inngest credentials set but cannot verify workflow runs (no Supabase access)',
     }, { env });
   }
@@ -54,79 +54,130 @@ export async function checkInngest(): Promise<InngestIntegration> {
   try {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Check 2: Look for evidence of Inngest activity via documents
-    // If documents exist and have been updated recently, Inngest is working
-    const { data: recentDocs, error: docError } = await supabase
-      .from('documents')
-      .select('id, updated_at')
-      .order('updated_at', { ascending: false })
-      .limit(10);
+    // Evidence of activity comes from audit_events emitted by Inngest functions.
+    const INNGEST_AUDIT_ACTIONS = [
+      'google_oauth_initialized',
+      'google_disconnected',
+      'gmail_sync_completed',
+      'dlp_allowed',
+      'dlp_redacted',
+      'dlp_quarantined',
+      'embedding_indexed',
+    ];
 
-    if (docError) {
-      return buildResult('configured', ['API_UNREACHABLE'], {
-        error: docError.message,
-        note: 'Could not query documents table',
+    const { data: recentEvents, error: eventsError } = await supabase
+      .from('audit_events')
+      .select('id, action, object_id, created_at, metadata')
+      .in('action', INNGEST_AUDIT_ACTIONS)
+      .order('created_at', { ascending: false })
+      .limit(25);
+
+    if (eventsError) {
+      return buildResult('error', ['API_UNREACHABLE'], {
+        error: eventsError.message,
+        note: 'Could not query audit_events for Inngest activity',
       }, { env });
     }
 
-    // No documents at all
-    if (!recentDocs || recentDocs.length === 0) {
-      return buildResult('configured', ['NO_DATA_OBSERVED'], {
-        note: 'Inngest configured but no documents synced yet',
+    const lastSuccessAt = recentEvents?.[0]?.created_at || null;
+    const lastRunIds = (recentEvents || []).slice(0, 3).map(e => e.id);
+
+    // Heuristic "failures": DLP audit events where Nightfall scan did not run (metadata.scanned === false).
+    const recentFailures = (recentEvents || []).filter((e: { action?: string; metadata?: unknown }) => {
+      if (typeof e.action !== 'string') return false;
+      if (!e.action.startsWith('dlp_')) return false;
+      const m = e.metadata as Record<string, unknown> | null;
+      return Boolean(m && m.scanned === false);
+    }).length;
+
+    // Queue/backlog: pending documents older than 60 minutes
+    const backlogCutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const [{ count: pendingTotal, error: pendingTotalError }, { count: pendingBacklog, error: pendingBacklogError }] = await Promise.all([
+      supabase.from('documents').select('id', { count: 'exact', head: true }).eq('dlp_status', 'pending'),
+      supabase.from('documents').select('id', { count: 'exact', head: true }).eq('dlp_status', 'pending').lt('created_at', backlogCutoff),
+    ]);
+
+    const pendingErrors = [pendingTotalError, pendingBacklogError].filter(Boolean);
+    if (pendingErrors.length > 0) {
+      return buildResult('error', ['API_UNREACHABLE'], {
+        note: 'Could not compute pending/backlog documents for Inngest health',
+        errors: pendingErrors.map(e => e?.message),
       }, { env });
     }
 
-    // Check if we have recent activity (documents updated in last 24h)
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const recentlyUpdated = recentDocs.filter(
-      d => d.updated_at && new Date(d.updated_at) > twentyFourHoursAgo
-    );
+    const pending = pendingTotal || 0;
+    const backlog = pendingBacklog || 0;
 
-    // Also check for chunks - if chunks exist, processing has occurred
-    const { count: chunkCount } = await supabase
-      .from('document_chunks')
-      .select('id', { count: 'exact', head: true });
+    if (!recentEvents || recentEvents.length === 0) {
+      return buildResult('configured', ['NO_DATA_OBSERVED_YET'], {
+        note: 'Inngest configured; no observable workflow activity yet (no audit_events)',
+        pending_documents: pending,
+        backlog_documents: backlog,
+      }, { env });
+    }
 
-    // Determine status based on evidence
-    if (recentlyUpdated.length > 0) {
-      // Recent activity - verified
-      const mostRecent = recentDocs[0];
-      return buildResult('verified', ['ALL_CHECKS_PASSED', 'DATA_FLOWING'], {
-        documents_count: recentDocs.length,
-        recently_updated: recentlyUpdated.length,
-        chunks_processed: chunkCount || 0,
-        note: `${recentlyUpdated.length} documents updated in last 24h`,
+    if (backlog > 0) {
+      return buildResult('degraded', ['QUEUE_BACKED_UP'], {
+        note: `${backlog} pending documents older than 60 minutes`,
+        pending_documents: pending,
+        backlog_documents: backlog,
+        backlog_cutoff: backlogCutoff,
       }, {
         env,
-        last_run_ids: recentDocs.slice(0, 3).map(d => d.id),
-        last_success_at: mostRecent.updated_at,
-        recent_failures: 0,
+        last_run_ids: lastRunIds,
+        last_success_at: lastSuccessAt,
+        recent_failures: recentFailures,
       });
     }
 
-    // Documents exist but no recent activity
-    if ((chunkCount || 0) > 0) {
-      // Has processed chunks - processing status
+    if (pending > 0) {
       return buildResult('processing', ['DATA_FLOWING'], {
-        documents_count: recentDocs.length,
-        chunks_processed: chunkCount,
-        note: 'Documents and chunks exist, no recent updates',
+        note: `${pending} documents pending DLP scan`,
+        pending_documents: pending,
+        backlog_documents: backlog,
       }, {
         env,
-        last_run_ids: recentDocs.slice(0, 3).map(d => d.id),
-        last_success_at: recentDocs[0]?.updated_at || null,
-        recent_failures: 0,
+        last_run_ids: lastRunIds,
+        last_success_at: lastSuccessAt,
+        recent_failures: recentFailures,
       });
     }
 
-    // Has documents but no chunks yet - connected
-    return buildResult('connected', ['NO_DATA_OBSERVED'], {
-      documents_count: recentDocs.length,
-      chunks_processed: 0,
-      note: 'Documents exist but not yet chunked',
+    if (recentFailures > 0) {
+      return buildResult('degraded', ['JOBS_FAILING'], {
+        note: `${recentFailures} DLP scans recorded with scanned=false in recent audit events`,
+        recent_failures: recentFailures,
+      }, {
+        env,
+        last_run_ids: lastRunIds,
+        last_success_at: lastSuccessAt,
+        recent_failures: recentFailures,
+      });
+    }
+
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const lastSuccessDate = lastSuccessAt ? new Date(lastSuccessAt) : null;
+
+    if (lastSuccessDate && lastSuccessDate > twentyFourHoursAgo) {
+      return buildResult('verified', ['ALL_CHECKS_PASSED', 'DATA_FLOWING'], {
+        note: 'Recent Inngest workflow activity observed in audit_events (within 24h)',
+        last_success_at: lastSuccessAt,
+      }, {
+        env,
+        last_run_ids: lastRunIds,
+        last_success_at: lastSuccessAt,
+        recent_failures: recentFailures,
+      });
+    }
+
+    return buildResult('degraded', ['STALE_DATA'], {
+      note: 'No Inngest workflow activity observed in the last 24h (based on audit_events)',
+      last_success_at: lastSuccessAt,
     }, {
       env,
-      last_run_ids: recentDocs.slice(0, 3).map(d => d.id),
+      last_run_ids: lastRunIds,
+      last_success_at: lastSuccessAt,
+      recent_failures: recentFailures,
     });
 
   } catch (error) {

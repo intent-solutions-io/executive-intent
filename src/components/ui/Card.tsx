@@ -1,9 +1,7 @@
 import { cn } from '@/lib/utils';
-import { ReactNode } from 'react';
+import { HTMLAttributes, ReactNode } from 'react';
 
-interface CardProps {
-  children: ReactNode;
-  className?: string;
+interface CardProps extends HTMLAttributes<HTMLDivElement> {
   hover?: boolean;
   padding?: 'none' | 'sm' | 'md' | 'lg';
 }
@@ -20,11 +18,13 @@ export function Card({
   className,
   hover = false,
   padding = 'md',
+  ...props
 }: CardProps) {
   return (
     <div
+      {...props}
       className={cn(
-        'bg-white rounded-xl border border-neutral-200 shadow-card',
+        'bg-white rounded-2xl border border-neutral-200 shadow-card',
         hover && 'transition-shadow hover:shadow-card-hover',
         paddingStyles[padding],
         className
@@ -71,7 +71,7 @@ interface CardDescriptionProps {
 
 export function CardDescription({ children, className }: CardDescriptionProps) {
   return (
-    <p className={cn('text-body-sm text-neutral-500 mt-1', className)}>
+    <p className={cn('text-body-sm text-neutral-600 mt-1', className)}>
       {children}
     </p>
   );
@@ -93,7 +93,7 @@ interface CardFooterProps {
 
 export function CardFooter({ children, className }: CardFooterProps) {
   return (
-    <div className={cn('mt-4 pt-4 border-t border-neutral-100', className)}>
+    <div className={cn('mt-4 pt-4 border-t border-neutral-200', className)}>
       {children}
     </div>
   );

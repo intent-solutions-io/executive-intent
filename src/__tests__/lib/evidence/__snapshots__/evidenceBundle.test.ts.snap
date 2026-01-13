@@ -1,0 +1,204 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`EvidenceBundle fixture > matches a stable snapshot shape 1`] = `
+{
+  "builder": "vitest",
+  "ci": {
+    "provider": "github-actions",
+    "run_id": "123456789",
+    "run_url": "https://github.com/intent-solutions-io/executive-intent/actions/runs/123456789",
+    "workflow": "deploy.yml",
+  },
+  "commit": {
+    "branch": "main",
+    "hash": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+  },
+  "deploy": {
+    "channel": "live",
+    "completed_at": "2026-01-01T00:00:00.000Z",
+    "firebase_project": "executive-intent",
+    "site": "executive-intent",
+    "target": "firebase-hosting",
+    "url": "https://executive-intent.web.app",
+  },
+  "generated_at": "2026-01-01T00:00:00.000Z",
+  "integrations": {
+    "embeddings": {
+      "checked_at": "2026-01-01T00:00:00.000Z",
+      "last_index_at": null,
+      "rationale": {
+        "details": {
+          "note": "OPENAI_API_KEY not set",
+        },
+        "reason_codes": [
+          "MISSING_CREDENTIALS",
+        ],
+      },
+      "retrieval_test": {
+        "failures": {
+          "errors": 0,
+          "no_results": 0,
+        },
+        "passed": false,
+        "query_count": 0,
+        "samples": [],
+        "success_count": 0,
+        "threshold": 8,
+        "top_k": 10,
+      },
+      "status": "error",
+      "vector_count": 0,
+    },
+    "google_oauth": {
+      "checked_at": "2026-01-01T00:00:00.000Z",
+      "last_connect_at": null,
+      "rationale": {
+        "details": {
+          "note": "OAuth credentials configured, awaiting first user connection",
+        },
+        "reason_codes": [
+          "NO_TOKEN",
+        ],
+      },
+      "scopes": [
+        "https://www.googleapis.com/auth/gmail.readonly",
+      ],
+      "status": "configured",
+      "token_valid": false,
+    },
+    "inngest": {
+      "checked_at": "2026-01-01T00:00:00.000Z",
+      "env": "production",
+      "last_run_ids": [],
+      "last_success_at": null,
+      "rationale": {
+        "details": {
+          "note": "Inngest configured; no observable workflow activity yet",
+        },
+        "reason_codes": [
+          "NO_DATA_OBSERVED_YET",
+        ],
+      },
+      "recent_failures": 0,
+      "status": "configured",
+    },
+    "nightfall": {
+      "checked_at": "2026-01-01T00:00:00.000Z",
+      "last_scan_at": null,
+      "last_scan_counts": {
+        "allowed": 0,
+        "quarantined": 0,
+        "redacted": 0,
+      },
+      "policy_name": "executive-intent-dlp",
+      "rationale": {
+        "details": {
+          "note": "Nightfall API reachable; no DLP outcomes observed yet",
+        },
+        "reason_codes": [
+          "NO_DATA_OBSERVED_YET",
+        ],
+      },
+      "status": "connected",
+    },
+    "supabase": {
+      "checked_at": "2026-01-01T00:00:00.000Z",
+      "chunk_count": 0,
+      "document_count": 0,
+      "pgvector": true,
+      "project_ref": "test",
+      "rationale": {
+        "details": {
+          "note": "Database reachable; no documents observed yet",
+        },
+        "reason_codes": [
+          "NO_DATA_OBSERVED_YET",
+        ],
+      },
+      "rls_verified": true,
+      "schema_version": "003",
+      "status": "connected",
+      "vector_count": 0,
+    },
+  },
+  "notes": "Fixture evidence bundle used for schema stability testing.",
+  "pipeline_health": {
+    "documents_chunked": 0,
+    "documents_dlp_scanned": 0,
+    "documents_embedded": 0,
+    "documents_total": 0,
+    "fully_processed": 0,
+    "processing_rate": "0/0 (0%)",
+    "rationale": {
+      "details": {
+        "focus_subsystems": [
+          "embeddings",
+        ],
+        "note": "Pipeline blocked: embeddings in error",
+        "subsystem_rationales": {
+          "embeddings": {
+            "note": "OPENAI_API_KEY not set",
+            "reason_codes": [
+              "MISSING_CREDENTIALS",
+            ],
+            "status": "error",
+          },
+          "google_oauth": {
+            "note": "OAuth credentials configured, awaiting first user connection",
+            "reason_codes": [
+              "NO_TOKEN",
+            ],
+            "status": "configured",
+          },
+          "inngest": {
+            "note": "Inngest configured; no observable workflow activity yet",
+            "reason_codes": [
+              "NO_DATA_OBSERVED_YET",
+            ],
+            "status": "configured",
+          },
+          "nightfall": {
+            "note": "Nightfall API reachable; no DLP outcomes observed yet",
+            "reason_codes": [
+              "NO_DATA_OBSERVED_YET",
+            ],
+            "status": "connected",
+          },
+          "supabase": {
+            "note": "Database reachable; no documents observed yet",
+            "reason_codes": [
+              "NO_DATA_OBSERVED_YET",
+            ],
+            "status": "connected",
+          },
+        },
+        "subsystem_statuses": {
+          "embeddings": "error",
+          "google_oauth": "configured",
+          "inngest": "configured",
+          "nightfall": "connected",
+          "supabase": "connected",
+        },
+      },
+      "reason_codes": [
+        "MISSING_CREDENTIALS",
+      ],
+    },
+    "status": "error",
+    "subsystem_statuses": {
+      "embeddings": "error",
+      "google_oauth": "configured",
+      "inngest": "configured",
+      "nightfall": "connected",
+      "supabase": "connected",
+    },
+  },
+  "product": "Executive Intent",
+  "redactions": {
+    "rules_applied": [
+      "tokens",
+      "api_keys",
+    ],
+  },
+}
+`;

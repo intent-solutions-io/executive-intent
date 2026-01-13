@@ -2,48 +2,55 @@
 
 import { cn } from '@/lib/utils';
 import { useState, useCallback } from 'react';
+import { useToast } from './Toast';
 
 interface CopyFieldProps {
   value: string;
+  copyValue?: string;
+  displayValue?: string;
   label?: string;
   truncate?: boolean;
   className?: string;
 }
 
-export function CopyField({ value, label, truncate = false, className }: CopyFieldProps) {
+export function CopyField({ value, copyValue, displayValue, label, truncate = false, className }: CopyFieldProps) {
   const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
+  const copyText = copyValue ?? value;
+  const shownText = displayValue ?? value;
 
   const handleCopy = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(value);
+      await navigator.clipboard.writeText(copyText);
       setCopied(true);
+      toast(label ? `${label} copied` : 'Copied');
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy:', err);
+      toast('Copy failed');
     }
-  }, [value]);
+  }, [copyText, label, toast]);
 
   return (
     <div className={cn('flex flex-col gap-1', className)}>
       {label && (
-        <span className="text-body-xs text-neutral-500 uppercase tracking-wider font-medium">
+        <span className="text-body-xs text-neutral-600 uppercase tracking-wider font-medium">
           {label}
         </span>
       )}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 min-w-0">
         <code
           className={cn(
-            'font-mono text-body-sm bg-neutral-100 px-2 py-1 rounded text-neutral-800',
-            truncate && 'truncate max-w-[200px]'
+            'flex-1 min-w-0 font-mono text-body-sm bg-neutral-100 border border-neutral-200/70 px-2.5 py-1.5 rounded-lg text-neutral-900',
+            truncate ? 'truncate whitespace-nowrap' : 'break-all whitespace-normal'
           )}
-          title={truncate ? value : undefined}
+          title={truncate ? shownText : undefined}
         >
-          {value}
+          {shownText}
         </code>
         <button
           onClick={handleCopy}
-          className="flex-shrink-0 p-1.5 rounded hover:bg-neutral-100 transition-colors text-neutral-500 hover:text-neutral-700"
-          aria-label={copied ? 'Copied!' : 'Copy to clipboard'}
+          className="flex-shrink-0 p-1.5 rounded-lg hover:bg-neutral-100 transition-colors text-neutral-600 hover:text-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+          aria-label={copied ? `${label ?? 'Value'} copied` : `Copy ${label ?? 'value'}`}
         >
           {copied ? (
             <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
