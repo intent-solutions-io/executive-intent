@@ -7,10 +7,7 @@ import type {
   RetrievalTest,
   RetrievalSample,
 } from '../../../src/lib/evidence/types';
-
-const OPENAI_EMBEDDING_URL = 'https://api.openai.com/v1/embeddings';
-const OPENAI_EMBEDDING_MODEL = 'text-embedding-3-small';
-const OPENAI_EMBEDDING_DIMENSIONS = 768;
+import { generateEmbeddings, getEmbeddingModel } from '../../../src/lib/embeddings/provider';
 
 // Deterministic, non-sensitive retrieval probes
 const TEST_QUERIES = [
@@ -29,7 +26,7 @@ const TEST_QUERIES = [
 export async function checkEmbeddings(): Promise<EmbeddingsIntegration> {
   const now = new Date().toISOString();
 
-  const openaiKey = process.env.OPENAI_API_KEY;
+  const gcpProjectId = process.env.GCP_PROJECT_ID;
   const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -108,15 +105,17 @@ export async function checkEmbeddings(): Promise<EmbeddingsIntegration> {
 
     const lastIndexAt = latestChunk?.[0]?.created_at || null;
 
-    const provider_configured = Boolean(openaiKey);
+    const provider_configured = Boolean(gcpProjectId);
+    const provider_name = getEmbeddingModel();
 
     // No vectors yet (provider may be reachable, but no indexed data observed)
     if (!vectorCount || vectorCount === 0) {
       if (!provider_configured) {
         return buildResult('error', ['MISSING_CREDENTIALS'], {
-          missing: ['OPENAI_API_KEY'],
-          note: 'No embeddings indexed and embedding provider is not configured',
+          missing: ['GCP_PROJECT_ID'],
+          note: 'No embeddings indexed and Vertex AI is not configured',
           provider_configured,
+          provider_name,
         }, {
           vector_count: 0,
           last_index_at: lastIndexAt,
@@ -124,13 +123,13 @@ export async function checkEmbeddings(): Promise<EmbeddingsIntegration> {
       }
 
       // Prove the embedding provider is reachable (no-op probe embedding)
-      const probe = await fetchOpenAIEmbeddings(openaiKey!, ['Executive Intent embedding probe']);
+      const probe = await testVertexAIEmbeddings(['Executive Intent embedding probe']);
       if (!probe.ok) {
         return buildResult('error', [probe.reason], {
-          note: 'Embedding provider probe failed',
-          api_status: probe.status,
+          note: 'Vertex AI embedding probe failed',
           error: probe.error,
           provider_configured,
+          provider_name,
         }, {
           vector_count: 0,
           last_index_at: lastIndexAt,
@@ -138,8 +137,9 @@ export async function checkEmbeddings(): Promise<EmbeddingsIntegration> {
       }
 
       return buildResult('connected', ['NO_DATA_OBSERVED_YET'], {
-        note: 'Embedding provider reachable; no vectors indexed yet',
+        note: 'Vertex AI embedding provider reachable; no vectors indexed yet',
         provider_configured,
+        provider_name,
       }, {
         vector_count: 0,
         last_index_at: lastIndexAt,
@@ -179,7 +179,7 @@ export async function checkEmbeddings(): Promise<EmbeddingsIntegration> {
 
     if (provider_configured) {
       queries = [...TEST_QUERIES];
-      const embedded = await fetchOpenAIEmbeddings(openaiKey!, queries);
+      const embedded = await testVertexAIEmbeddings(queries);
       if (!embedded.ok) {
         const retrieval_test: RetrievalTest = {
           query_count: queries.length,
@@ -192,10 +192,10 @@ export async function checkEmbeddings(): Promise<EmbeddingsIntegration> {
         };
 
         return buildResult('degraded', ['API_UNREACHABLE'], {
-          note: 'Embedding provider could not embed retrieval probes',
-          api_status: embedded.status,
+          note: 'Vertex AI could not embed retrieval probes',
           error: embedded.error,
           provider_configured,
+          provider_name,
         }, {
           vector_count: vectorCount || 0,
           last_index_at: lastIndexAt,
@@ -259,6 +259,7 @@ export async function checkEmbeddings(): Promise<EmbeddingsIntegration> {
       last_index_at: lastIndexAt,
       retrieval_success_rate: `${retrievalTest.success_count}/${retrievalTest.query_count}`,
       provider_configured,
+      provider_name,
     };
 
     if (!provider_configured) {
@@ -269,8 +270,8 @@ export async function checkEmbeddings(): Promise<EmbeddingsIntegration> {
           ? ['MISSING_CREDENTIALS', 'RETRIEVAL_BELOW_THRESHOLD']
           : ['MISSING_CREDENTIALS', 'NO_DATA_OBSERVED_YET'];
       details.note = retrievalTest.passed
-        ? 'Retrieval works with existing vectors, but OPENAI_API_KEY is missing so new embeddings cannot be generated'
-        : 'OPENAI_API_KEY is missing (embedding generation disabled)';
+        ? 'Retrieval works with existing vectors, but GCP_PROJECT_ID is missing so new embeddings cannot be generated'
+        : 'GCP_PROJECT_ID is missing (Vertex AI embedding generation disabled)';
     } else if (retrievalTest.query_count > 0 && retrievalTest.failures.errors === retrievalTest.query_count) {
       status = 'error';
       reason_codes = ['API_UNREACHABLE'];
@@ -408,54 +409,24 @@ async function runRetrievalTests(params: {
   };
 }
 
-async function fetchOpenAIEmbeddings(apiKey: string, inputs: string[]): Promise<
+/**
+ * Test Vertex AI embeddings using the shared provider
+ */
+async function testVertexAIEmbeddings(inputs: string[]): Promise<
   | { ok: true; embeddings: number[][] }
-  | { ok: false; status?: number; reason: ReasonCode; error: string }
+  | { ok: false; reason: ReasonCode; error: string }
 > {
   try {
-    const resp = await fetch(OPENAI_EMBEDDING_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: OPENAI_EMBEDDING_MODEL,
-        input: inputs,
-        dimensions: OPENAI_EMBEDDING_DIMENSIONS,
-      }),
-    });
-
-    const status = resp.status;
-    if (!resp.ok) {
-      const bodyText = await resp.text().catch(() => '');
-      if (status === 401 || status === 403) {
-        return { ok: false, status, reason: 'AUTH_FAILED', error: bodyText || `HTTP ${status}` };
-      }
-      return { ok: false, status, reason: 'API_UNREACHABLE', error: bodyText || `HTTP ${status}` };
-    }
-
-    const json = (await resp.json().catch(() => null)) as null | {
-      data?: Array<{ embedding?: number[]; index?: number }>;
-    };
-
-    const data = Array.isArray(json?.data) ? json!.data! : [];
-    const sorted = data
-      .map((d, idx) => ({ embedding: d.embedding, index: typeof d.index === 'number' ? d.index : idx }))
-      .sort((a, b) => a.index - b.index);
-
-    const embeddings = sorted.map((d) => Array.isArray(d.embedding) ? d.embedding : []);
-
-    if (embeddings.length !== inputs.length || embeddings.some((e) => e.length !== OPENAI_EMBEDDING_DIMENSIONS)) {
-      return { ok: false, reason: 'API_UNREACHABLE', error: 'Unexpected embedding response shape/dimensions' };
-    }
-
+    const embeddings = await generateEmbeddings(inputs);
     return { ok: true, embeddings };
   } catch (err) {
-    return {
-      ok: false,
-      reason: 'API_UNREACHABLE',
-      error: err instanceof Error ? err.message : 'Network error',
-    };
+    const message = err instanceof Error ? err.message : 'Unknown error';
+
+    // Check for auth errors
+    if (message.includes('401') || message.includes('403') || message.includes('permission')) {
+      return { ok: false, reason: 'AUTH_FAILED', error: message };
+    }
+
+    return { ok: false, reason: 'API_UNREACHABLE', error: message };
   }
 }

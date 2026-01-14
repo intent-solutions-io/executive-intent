@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createAdminClient();
+    const supabase = await createAdminClient();
 
     // Step 1: Generate embedding for the query
     console.log(`Generating embedding for query: "${query}"`);

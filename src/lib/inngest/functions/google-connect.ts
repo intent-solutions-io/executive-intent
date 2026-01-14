@@ -18,10 +18,10 @@ export const googleConnect = inngest.createFunction(
   { event: "google/connect.completed" },
   async ({ event, step }) => {
     const { tenantId, userId, connectionId } = event.data;
-    const supabase = createAdminClient();
 
     // Step 1: Initialize sync cursors
     await step.run("initialize-cursors", async () => {
+      const supabase = await createAdminClient();
       // The connection was already created by the callback
       // Just ensure cursors are initialized
       const { error } = await supabase
@@ -62,6 +62,7 @@ export const googleConnect = inngest.createFunction(
 
     // Step 4: Create audit event
     await step.run("audit-connect", async () => {
+      const supabase = await createAdminClient();
       await supabase.from("audit_events").insert({
         tenant_id: tenantId,
         user_id: userId,
@@ -103,10 +104,10 @@ export const googleDisconnect = inngest.createFunction(
   { event: "google/disconnect.requested" },
   async ({ event, step }) => {
     const { tenantId, connectionId } = event.data;
-    const supabase = createAdminClient();
 
     // Step 1: Get all document IDs for this connection
     const documentIds = await step.run("get-document-ids", async () => {
+      const supabase = await createAdminClient();
       const { data, error } = await supabase
         .from("documents")
         .select("id")
@@ -126,6 +127,7 @@ export const googleDisconnect = inngest.createFunction(
         return { deleted: 0 };
       }
 
+      const supabase = await createAdminClient();
       const { error, count } = await supabase
         .from("document_chunks")
         .delete()
@@ -141,6 +143,7 @@ export const googleDisconnect = inngest.createFunction(
 
     // Step 3: Delete all documents
     await step.run("delete-documents", async () => {
+      const supabase = await createAdminClient();
       const { error, count } = await supabase
         .from("documents")
         .delete()
@@ -156,6 +159,7 @@ export const googleDisconnect = inngest.createFunction(
 
     // Step 4: Delete connection record
     await step.run("delete-connection", async () => {
+      const supabase = await createAdminClient();
       const { error } = await supabase
         .from("google_connections")
         .delete()
@@ -171,6 +175,7 @@ export const googleDisconnect = inngest.createFunction(
 
     // Step 5: Audit
     await step.run("audit-disconnect", async () => {
+      const supabase = await createAdminClient();
       await supabase.from("audit_events").insert({
         tenant_id: tenantId,
         action: "google_disconnected",

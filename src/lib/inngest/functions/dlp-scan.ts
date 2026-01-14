@@ -27,7 +27,6 @@ export const dlpScan = inngest.createFunction(
   { event: "dlp/scan.requested" },
   async ({ event, step }) => {
     const { tenantId, documentId, source, externalId, textFields } = event.data;
-    const supabase = createAdminClient();
 
     // Step 1: Call Nightfall API
     const scanResult = await step.run("scan-nightfall", async () => {
@@ -87,6 +86,7 @@ export const dlpScan = inngest.createFunction(
 
     // Step 4: Update document with DLP status
     await step.run("update-document", async () => {
+      const supabase = await createAdminClient();
       // Map action to dlp_status enum
       const dlpStatus: "allowed" | "redacted" | "quarantined" = policyResult.action;
 
@@ -133,6 +133,7 @@ export const dlpScan = inngest.createFunction(
 
     // Step 7: Audit
     await step.run("audit-dlp", async () => {
+      const supabase = await createAdminClient();
       await supabase.from("audit_events").insert({
         tenant_id: tenantId,
         action: `dlp_${policyResult.action}`,

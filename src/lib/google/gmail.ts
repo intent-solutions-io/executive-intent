@@ -5,6 +5,7 @@
  */
 
 import { google, gmail_v1 } from "googleapis";
+import { getSecret } from "@/lib/secret-manager";
 
 export interface GmailMessage {
   id: string;
@@ -26,10 +27,12 @@ export interface GmailSyncResult {
 /**
  * Creates an authenticated Gmail client
  */
-export function createGmailClient(accessToken: string): gmail_v1.Gmail {
+export async function createGmailClient(accessToken: string): Promise<gmail_v1.Gmail> {
+  const clientSecret = await getSecret("GOOGLE_CLIENT_SECRET");
+
   const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET
+    clientSecret
   );
 
   oauth2Client.setCredentials({ access_token: accessToken });
@@ -44,9 +47,11 @@ export async function refreshAccessToken(refreshToken: string): Promise<{
   accessToken: string;
   expiresIn: number;
 }> {
+  const clientSecret = await getSecret("GOOGLE_CLIENT_SECRET");
+
   const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET
+    clientSecret
   );
 
   oauth2Client.setCredentials({ refresh_token: refreshToken });
@@ -75,7 +80,7 @@ export async function fetchGmailMessages(
   historyId: string | null,
   maxResults: number = 50
 ): Promise<GmailSyncResult> {
-  const gmail = createGmailClient(accessToken);
+  const gmail = await createGmailClient(accessToken);
 
   if (historyId) {
     // Incremental sync using history API

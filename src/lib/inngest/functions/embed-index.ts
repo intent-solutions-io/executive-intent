@@ -28,10 +28,10 @@ export const embedIndex = inngest.createFunction(
   { event: "embedding/index.requested" },
   async ({ event, step }) => {
     const { tenantId, documentId, sanitizedText } = event.data;
-    const supabase = createAdminClient();
 
     // Step 1: Fetch document info
     const document = await step.run("fetch-document", async () => {
+      const supabase = await createAdminClient();
       const { data, error } = await supabase
         .from("documents")
         .select("*")
@@ -127,6 +127,7 @@ export const embedIndex = inngest.createFunction(
 
     // Step 5: Delete existing chunks for this document
     await step.run("delete-old-chunks", async () => {
+      const supabase = await createAdminClient();
       const { error } = await supabase
         .from("document_chunks")
         .delete()
@@ -141,6 +142,7 @@ export const embedIndex = inngest.createFunction(
 
     // Step 6: Upsert to pgvector
     await step.run("upsert-vectors", async () => {
+      const supabase = await createAdminClient();
       console.log(`Upserting ${embeddings.length} vectors for document ${documentId}`);
 
       const chunkRecords = chunks.map((chunk: TextChunk, i: number) => ({
@@ -166,6 +168,7 @@ export const embedIndex = inngest.createFunction(
 
     // Step 7: Audit
     await step.run("audit-embed", async () => {
+      const supabase = await createAdminClient();
       await supabase.from("audit_events").insert({
         tenant_id: tenantId,
         action: "embedding_indexed",

@@ -4,6 +4,8 @@
  * Scans text for sensitive data using Nightfall's REST API.
  */
 
+import { getSecret } from "@/lib/secret-manager";
+
 const NIGHTFALL_API_URL = "https://api.nightfall.ai/v3/scan";
 
 export interface NightfallFinding {
@@ -59,10 +61,11 @@ const DEFAULT_DETECTORS = [
 export async function scanText(
   textPayloads: string[]
 ): Promise<NightfallFinding[]> {
-  const apiKey = process.env.NIGHTFALL_API_KEY;
-
-  if (!apiKey) {
-    console.warn("NIGHTFALL_API_KEY not set, skipping DLP scan");
+  let apiKey: string;
+  try {
+    apiKey = await getSecret("NIGHTFALL_API_KEY");
+  } catch {
+    console.warn("NIGHTFALL_API_KEY not available, skipping DLP scan");
     return [];
   }
 

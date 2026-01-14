@@ -1,9 +1,9 @@
 {
   "product": "Executive Intent",
-  "generated_at": "2026-01-12T11:11:41.949Z",
+  "generated_at": "2026-01-13T19:52:37.684Z",
   "builder": "Claude Code",
   "commit": {
-    "hash": "bd4335c8b9299bbbc34d52034d524beddad4b9d8",
+    "hash": "a9ded2b09cac01405fb42ca7caf1f72a2d452316",
     "branch": "main"
   },
   "ci": {
@@ -18,11 +18,39 @@
     "site": "executive-intent",
     "channel": "live",
     "url": "https://executive-intent.web.app",
-    "completed_at": "2026-01-12T11:11:43.319Z"
+    "completed_at": "2026-01-13T19:52:39.949Z"
   },
   "integrations": {
     "supabase": {
-      "status": "OK",
+      "status": "degraded",
+      "rationale": {
+        "reason_codes": [
+          "DOC_CHUNK_MISMATCH",
+          "DOC_VECTOR_MISMATCH"
+        ],
+        "details": {
+          "document_count": 11,
+          "chunk_count": 2,
+          "vector_count": 2,
+          "pgvector": true,
+          "dlp_breakdown": {
+            "pending": 0,
+            "allowed": 11,
+            "redacted": 0,
+            "quarantined": 0
+          },
+          "documents_with_chunks": 2,
+          "documents_with_vectors": 2,
+          "eligible_documents": 11,
+          "eligible_with_chunks": 2,
+          "eligible_with_vectors": 2,
+          "eligible_chunk_coverage": 0.18181818181818182,
+          "eligible_vector_coverage": 0.18181818181818182,
+          "last_index_at": "2026-01-12T07:32:12.026282+00:00",
+          "has_recent_index": false,
+          "note": "Coverage mismatch (eligible: 11, chunked: 2, embedded: 2)"
+        }
+      },
       "project_ref": "abseweczdjkqxvvptqrv",
       "schema_version": "003",
       "pgvector": true,
@@ -30,45 +58,196 @@
       "document_count": 11,
       "chunk_count": 2,
       "vector_count": 2,
-      "checked_at": "2026-01-12T11:11:41.950Z"
+      "checked_at": "2026-01-13T19:52:37.685Z"
     },
     "inngest": {
-      "status": "OK",
+      "status": "configured",
+      "rationale": {
+        "reason_codes": [
+          "NO_DATA_OBSERVED_YET"
+        ],
+        "details": {
+          "note": "Inngest configured; no observable workflow activity yet (no audit_events)",
+          "pending_documents": 0,
+          "backlog_documents": 0
+        }
+      },
       "env": "production",
-      "last_run_ids": [
-        "01KERYF5KTGGWW5WTJNKVJHQ8H"
-      ],
-      "last_success_at": "2026-01-12T11:11:41.975Z",
-      "checked_at": "2026-01-12T11:11:41.975Z"
+      "last_run_ids": [],
+      "last_success_at": null,
+      "recent_failures": 0,
+      "checked_at": "2026-01-13T19:52:37.717Z"
     },
     "nightfall": {
-      "status": "OK",
+      "status": "verified",
+      "rationale": {
+        "reason_codes": [
+          "ALL_CHECKS_PASSED",
+          "DATA_FLOWING"
+        ],
+        "details": {
+          "api_probe": "ok",
+          "scan_counts": {
+            "allowed": 11,
+            "redacted": 0,
+            "quarantined": 0
+          },
+          "total_scanned": 11,
+          "pending_count": 0,
+          "last_scan_at": "2026-01-12T07:34:58.640194+00:00",
+          "note": "DLP verified: 11 allowed, 0 redacted, 0 quarantined"
+        }
+      },
       "policy_name": "executive-intent-dlp",
       "last_scan_counts": {
         "allowed": 11,
         "redacted": 0,
         "quarantined": 0
       },
-      "checked_at": "2026-01-12T11:11:41.976Z"
+      "last_scan_at": "2026-01-12T07:34:58.640194+00:00",
+      "checked_at": "2026-01-13T19:52:37.719Z"
     },
     "google_oauth": {
-      "status": "OK",
+      "status": "configured",
+      "rationale": {
+        "reason_codes": [
+          "NO_TOKEN",
+          "NO_DATA_OBSERVED_YET"
+        ],
+        "details": {
+          "note": "No OAuth-scoped active connection found (ignoring IMAP test connections)",
+          "active_connections_found": 1
+        }
+      },
       "scopes": [
-        "imap"
+        "https://www.googleapis.com/auth/gmail.readonly",
+        "https://www.googleapis.com/auth/calendar.readonly",
+        "https://www.googleapis.com/auth/userinfo.email",
+        "https://www.googleapis.com/auth/userinfo.profile"
       ],
-      "last_connect_at": "2026-01-12T07:25:58.205013+00:00",
-      "checked_at": "2026-01-12T11:11:41.977Z"
+      "last_connect_at": null,
+      "token_valid": false,
+      "checked_at": "2026-01-13T19:52:37.728Z"
     },
     "embeddings": {
-      "status": "OK",
+      "status": "degraded",
+      "rationale": {
+        "reason_codes": [
+          "API_UNREACHABLE"
+        ],
+        "details": {
+          "note": "Embedding provider could not embed retrieval probes",
+          "api_status": 401,
+          "error": "{\n    \"error\": {\n        \"message\": \"Incorrect API key provided: YOUR_KEY*HERE. You can find your API key at https://platform.openai.com/account/api-keys.\",\n        \"type\": \"invalid_request_error\",\n        \"param\": null,\n        \"code\": \"invalid_api_key\"\n    }\n}\n",
+          "provider_configured": true
+        }
+      },
       "vector_count": 2,
       "last_index_at": "2026-01-12T07:32:12.026282+00:00",
       "retrieval_test": {
+        "query_count": 10,
+        "success_count": 0,
         "top_k": 10,
-        "returned": 2
+        "threshold": 8,
+        "passed": false,
+        "failures": {
+          "no_results": 0,
+          "errors": 10
+        },
+        "samples": [
+          {
+            "query": "executive summary",
+            "results": []
+          },
+          {
+            "query": "action items",
+            "results": []
+          },
+          {
+            "query": "meeting notes",
+            "results": []
+          }
+        ]
       },
-      "checked_at": "2026-01-12T11:11:41.977Z"
+      "checked_at": "2026-01-13T19:52:37.730Z"
     }
+  },
+  "pipeline_health": {
+    "status": "degraded",
+    "rationale": {
+      "reason_codes": [
+        "DOC_CHUNK_MISMATCH",
+        "DOC_VECTOR_MISMATCH",
+        "API_UNREACHABLE"
+      ],
+      "details": {
+        "focus_subsystems": [
+          "supabase",
+          "embeddings"
+        ],
+        "subsystem_statuses": {
+          "supabase": "degraded",
+          "inngest": "configured",
+          "nightfall": "verified",
+          "google_oauth": "configured",
+          "embeddings": "degraded"
+        },
+        "subsystem_rationales": {
+          "google_oauth": {
+            "status": "configured",
+            "reason_codes": [
+              "NO_TOKEN",
+              "NO_DATA_OBSERVED_YET"
+            ],
+            "note": "No OAuth-scoped active connection found (ignoring IMAP test connections)"
+          },
+          "inngest": {
+            "status": "configured",
+            "reason_codes": [
+              "NO_DATA_OBSERVED_YET"
+            ],
+            "note": "Inngest configured; no observable workflow activity yet (no audit_events)"
+          },
+          "supabase": {
+            "status": "degraded",
+            "reason_codes": [
+              "DOC_CHUNK_MISMATCH",
+              "DOC_VECTOR_MISMATCH"
+            ],
+            "note": "Coverage mismatch (eligible: 11, chunked: 2, embedded: 2)"
+          },
+          "embeddings": {
+            "status": "degraded",
+            "reason_codes": [
+              "API_UNREACHABLE"
+            ],
+            "note": "Embedding provider could not embed retrieval probes"
+          },
+          "nightfall": {
+            "status": "verified",
+            "reason_codes": [
+              "ALL_CHECKS_PASSED",
+              "DATA_FLOWING"
+            ],
+            "note": "DLP verified: 11 allowed, 0 redacted, 0 quarantined"
+          }
+        },
+        "note": "Pipeline degraded: supabase, embeddings needs attention"
+      }
+    },
+    "subsystem_statuses": {
+      "supabase": "degraded",
+      "inngest": "configured",
+      "nightfall": "verified",
+      "google_oauth": "configured",
+      "embeddings": "degraded"
+    },
+    "documents_total": 11,
+    "documents_chunked": 2,
+    "documents_embedded": 2,
+    "documents_dlp_scanned": 11,
+    "fully_processed": 2,
+    "processing_rate": "2/11 (18%)"
   },
   "redactions": {
     "rules_applied": [
@@ -79,5 +258,5 @@
       "oauth_secrets"
     ]
   },
-  "notes": "All integrations verified successfully."
+  "notes": "Some integrations degraded - system operational but needs attention. 2 of 11 documents fully processed. Retrieval test needs improvement (0/10, need 8)."
 }

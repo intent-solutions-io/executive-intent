@@ -33,10 +33,10 @@ export const gmailSync = inngest.createFunction(
   { event: "gmail/sync.requested" },
   async ({ event, step }) => {
     const { connectionId, tenantId } = event.data;
-    const supabase = createAdminClient();
 
     // Step 1: Get connection and refresh token
     const connection = await step.run("get-connection", async () => {
+      const supabase = await createAdminClient();
       const { data, error } = await supabase
         .from("google_connections")
         .select("*")
@@ -97,7 +97,7 @@ export const gmailSync = inngest.createFunction(
 
     for (const message of syncResult.messages) {
       const docResult = await step.run(`upsert-doc-${message.id}`, async () => {
-        return await upsertGmailDocument(supabase, tenantId, connectionId, message);
+        return await upsertGmailDocument(tenantId, connectionId, message);
       });
 
       documentIds.push({ messageId: message.id, documentId: docResult.documentId });
@@ -122,6 +122,7 @@ export const gmailSync = inngest.createFunction(
 
     // Step 5: Update sync cursor
     await step.run("update-cursor", async () => {
+      const supabase = await createAdminClient();
       if (syncResult.newHistoryId) {
         const { error } = await supabase
           .from("google_connections")
@@ -140,6 +141,7 @@ export const gmailSync = inngest.createFunction(
 
     // Step 6: Create audit event
     await step.run("audit-sync", async () => {
+      const supabase = await createAdminClient();
       await supabase.from("audit_events").insert({
         tenant_id: tenantId,
         action: "gmail_sync_completed",
@@ -170,11 +172,12 @@ interface DocumentRow {
  * Upserts a Gmail message as a document
  */
 async function upsertGmailDocument(
-  supabase: ReturnType<typeof createAdminClient>,
   tenantId: string,
   connectionId: string,
   message: GmailMessage
 ): Promise<{ documentId: string; isNew: boolean }> {
+  const supabase = await createAdminClient();
+
   // Check if document already exists
   const { data: existingData } = await supabase
     .from("documents")

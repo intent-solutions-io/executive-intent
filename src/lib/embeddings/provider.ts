@@ -2,14 +2,36 @@
  * Embedding Provider for Executive Intent
  *
  * Generates text embeddings for vector search.
- * Uses OpenAI's text-embedding-3-small model (768 dimensions).
+ * Uses Vertex AI text-embedding-005 model (768 dimensions).
+ * Authenticates via Workload Identity Federation (ADC) - no API keys.
  *
  * Storage is handled by Supabase pgvector.
  */
 
-const OPENAI_EMBEDDING_URL = "https://api.openai.com/v1/embeddings";
-const EMBEDDING_MODEL = "text-embedding-3-small";
+import { PredictionServiceClient, helpers } from "@google-cloud/aiplatform";
+
+const EMBEDDING_MODEL = "text-embedding-005";
 const EMBEDDING_DIMENSIONS = 768;
+const LOCATION = process.env.GCP_LOCATION || "us-central1";
+
+let predictionClient: PredictionServiceClient | null = null;
+
+function getClient(): PredictionServiceClient {
+  if (!predictionClient) {
+    predictionClient = new PredictionServiceClient({
+      apiEndpoint: `${LOCATION}-aiplatform.googleapis.com`,
+    });
+  }
+  return predictionClient;
+}
+
+function getEndpoint(): string {
+  const projectId = process.env.GCP_PROJECT_ID;
+  if (!projectId) {
+    throw new Error("GCP_PROJECT_ID not set for Vertex AI embeddings");
+  }
+  return `projects/${projectId}/locations/${LOCATION}/publishers/google/models/${EMBEDDING_MODEL}`;
+}
 
 export interface EmbeddingResult {
   embedding: number[];
@@ -24,45 +46,42 @@ export interface EmbeddingResult {
  * Generates an embedding for a single text
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const client = getClient();
+  const endpoint = getEndpoint();
 
-  if (!apiKey) {
-    throw new Error("OPENAI_API_KEY not set for embedding generation");
-  }
-
-  const response = await fetch(OPENAI_EMBEDDING_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: EMBEDDING_MODEL,
-      input: text,
-      dimensions: EMBEDDING_DIMENSIONS,
-    }),
+  const instance = helpers.toValue({
+    content: text,
+    taskType: "RETRIEVAL_DOCUMENT",
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("OpenAI embedding error:", response.status, errorText);
-    throw new Error(`OpenAI embedding error: ${response.status}`);
+  const parameters = helpers.toValue({
+    outputDimensionality: EMBEDDING_DIMENSIONS,
+  });
+
+  const [response] = await client.predict({
+    endpoint,
+    instances: [instance!],
+    parameters,
+  });
+
+  if (!response.predictions || response.predictions.length === 0) {
+    throw new Error("No embedding returned from Vertex AI");
   }
 
-  const data = await response.json();
-  return data.data[0].embedding;
+  const prediction = response.predictions[0];
+  const embeddingData = prediction?.structValue?.fields?.embeddings?.structValue?.fields?.values?.listValue?.values;
+
+  if (!embeddingData) {
+    throw new Error("Unexpected Vertex AI response structure");
+  }
+
+  return embeddingData.map((v) => v.numberValue ?? 0);
 }
 
 /**
  * Generates embeddings for multiple texts in batch
  */
 export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
-  const apiKey = process.env.OPENAI_API_KEY;
-
-  if (!apiKey) {
-    throw new Error("OPENAI_API_KEY not set for embedding generation");
-  }
-
   if (texts.length === 0) {
     return [];
   }
@@ -74,33 +93,37 @@ export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
     return [];
   }
 
-  const response = await fetch(OPENAI_EMBEDDING_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: EMBEDDING_MODEL,
-      input: validTexts,
-      dimensions: EMBEDDING_DIMENSIONS,
-    }),
+  const client = getClient();
+  const endpoint = getEndpoint();
+
+  const instances = validTexts.map(text =>
+    helpers.toValue({
+      content: text,
+      taskType: "RETRIEVAL_DOCUMENT",
+    })!
+  );
+
+  const parameters = helpers.toValue({
+    outputDimensionality: EMBEDDING_DIMENSIONS,
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("OpenAI embedding error:", response.status, errorText);
-    throw new Error(`OpenAI embedding error: ${response.status}`);
+  const [response] = await client.predict({
+    endpoint,
+    instances,
+    parameters,
+  });
+
+  if (!response.predictions || response.predictions.length === 0) {
+    throw new Error("No embeddings returned from Vertex AI");
   }
 
-  const data = await response.json();
-
-  // Sort by index to maintain order
-  const embeddings = data.data
-    .sort((a: { index: number }, b: { index: number }) => a.index - b.index)
-    .map((item: { embedding: number[] }) => item.embedding);
-
-  return embeddings;
+  return response.predictions.map((prediction) => {
+    const embeddingData = prediction?.structValue?.fields?.embeddings?.structValue?.fields?.values?.listValue?.values;
+    if (!embeddingData) {
+      throw new Error("Unexpected Vertex AI response structure");
+    }
+    return embeddingData.map((v) => v.numberValue ?? 0);
+  });
 }
 
 /**

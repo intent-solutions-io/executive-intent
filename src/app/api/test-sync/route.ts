@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     const { messages } = await fetchGmailMessagesImap(count);
     console.log(`[test-sync] Fetched ${messages.length} messages`);
 
-    const supabase = createAdminClient();
+    const supabase = await createAdminClient();
 
     // Create a test tenant if not exists
     let tenantId: string;

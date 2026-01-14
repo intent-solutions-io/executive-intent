@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { inngest } from "@/lib/inngest/client";
+import { getSecret } from "@/lib/secret-manager";
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo";
@@ -40,6 +41,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Get client secret from Secret Manager
+    const clientSecret = await getSecret("GOOGLE_CLIENT_SECRET");
+
     // Exchange code for tokens
     const tokenResponse = await fetch(GOOGLE_TOKEN_URL, {
       method: "POST",
@@ -49,7 +53,7 @@ export async function GET(request: NextRequest) {
       body: new URLSearchParams({
         code,
         client_id: process.env.GOOGLE_CLIENT_ID!,
-        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+        client_secret: clientSecret,
         redirect_uri: process.env.GOOGLE_REDIRECT_URI!,
         grant_type: "authorization_code",
       }),
@@ -87,7 +91,7 @@ export async function GET(request: NextRequest) {
     const userInfo = await userInfoResponse.json();
     console.log("User info:", { email: userInfo.email, id: userInfo.id });
 
-    const supabase = createAdminClient();
+    const supabase = await createAdminClient();
 
     // Create or get tenant (using email domain as tenant for demo)
     const emailDomain = userInfo.email.split("@")[1];
