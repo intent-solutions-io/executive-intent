@@ -9,19 +9,44 @@ import type {
 } from '../../../src/lib/evidence/types';
 import { generateEmbeddings, getEmbeddingModel } from '../../../src/lib/embeddings/provider';
 
-// Deterministic, non-sensitive retrieval probes
-const TEST_QUERIES = [
-  'executive summary',
-  'action items',
-  'meeting notes',
-  'project status',
-  'quarterly review',
-  'budget allocation',
-  'team updates',
-  'deadline',
-  'deliverables',
-  'next steps',
-] as const;
+// Generate content-aware retrieval probes from actual chunks
+async function getContentAwareQueries(
+  supabase: ReturnType<typeof createClient>,
+  tenantId: string,
+  maxQueries: number = 10
+): Promise<string[]> {
+  // Get sample chunk texts to derive semantic queries
+  const { data: chunks } = await supabase
+    .from('document_chunks')
+    .select('chunk_text')
+    .eq('tenant_id', tenantId)
+    .not('chunk_text', 'is', null)
+    .limit(maxQueries);
+
+  if (!chunks || chunks.length === 0) {
+    return [];
+  }
+
+  // Extract key phrases from each chunk (first 5-10 words)
+  const queries: string[] = [];
+  const seen = new Set<string>();
+
+  for (const chunk of chunks) {
+    const text = (chunk.chunk_text || '').trim();
+    if (!text) continue;
+
+    // Extract first meaningful phrase (5-10 words)
+    const words = text.split(/\s+/).slice(0, 8).join(' ');
+    const normalized = words.toLowerCase();
+
+    if (!seen.has(normalized) && words.length > 10) {
+      seen.add(normalized);
+      queries.push(words);
+    }
+  }
+
+  return queries.slice(0, maxQueries);
+}
 
 export async function checkEmbeddings(): Promise<EmbeddingsIntegration> {
   const now = new Date().toISOString();
@@ -178,7 +203,19 @@ export async function checkEmbeddings(): Promise<EmbeddingsIntegration> {
     let queryEmbeddings: number[][] = [];
 
     if (provider_configured) {
-      queries = [...TEST_QUERIES];
+      // Use content-aware queries derived from actual chunks
+      queries = await getContentAwareQueries(supabase, tenantId);
+      if (queries.length === 0) {
+        // Fallback: no content to query
+        return buildResult('configured', ['NO_DATA_OBSERVED_YET'], {
+          note: 'Vectors exist but no queryable content found',
+          provider_configured,
+          provider_name,
+        }, {
+          vector_count: vectorCount || 0,
+          last_index_at: lastIndexAt,
+        });
+      }
       const embedded = await testVertexAIEmbeddings(queries);
       if (!embedded.ok) {
         const retrieval_test: RetrievalTest = {
