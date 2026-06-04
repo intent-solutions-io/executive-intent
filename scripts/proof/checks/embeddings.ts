@@ -11,7 +11,10 @@ import { generateEmbeddings, getEmbeddingModel } from '../../../src/lib/embeddin
 
 // Generate content-aware retrieval probes from actual chunks
 async function getContentAwareQueries(
-  supabase: ReturnType<typeof createClient>,
+  // Untyped Supabase client (no generated Database types in proof scripts);
+  // typed as `any` to match the convention used by runRetrievalTests below.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
   tenantId: string,
   maxQueries: number = 10
 ): Promise<string[]> {
@@ -23,7 +26,8 @@ async function getContentAwareQueries(
     .not('chunk_text', 'is', null)
     .limit(maxQueries);
 
-  if (!chunks || chunks.length === 0) {
+  const rows = (chunks || []) as Array<{ chunk_text?: string | null }>;
+  if (rows.length === 0) {
     return [];
   }
 
@@ -31,7 +35,7 @@ async function getContentAwareQueries(
   const queries: string[] = [];
   const seen = new Set<string>();
 
-  for (const chunk of chunks) {
+  for (const chunk of rows) {
     const text = (chunk.chunk_text || '').trim();
     if (!text) continue;
 
