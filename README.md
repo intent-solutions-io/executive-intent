@@ -10,6 +10,8 @@ Executive Intent is a secure decision layer over Gmail and Calendar that:
 4. **Indexes** allowed/redacted content as vector embeddings
 5. **Searches** with AI-powered retrieval and source provenance
 
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/U5S225PTME)
+
 ## Stack
 
 - **Frontend**: Next.js 14 + React 19 + Tailwind CSS
